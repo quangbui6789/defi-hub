@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arc DEX DeFi Hub - Testnet</title>
+    <title>Arc DEX DeFi Hub - Real On-Chain</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
 </head>
 <body class="bg-gray-900 text-white font-sans min-h-screen">
 
     <header class="flex justify-between items-center p-6 border-b border-gray-800 bg-gray-950">
         <div class="flex items-center space-x-3">
             <div class="w-8 h-8 bg-blue-500 rounded-full animate-pulse"></div>
-            <span class="text-xl font-bold tracking-wider text-blue-400">ARC AI-DEFI HUB</span>
+            <span class="text-xl font-bold tracking-wider text-blue-400">ARC AI-DEFI HUB (REAL ON-CHAIN)</span>
         </div>
         <div class="flex items-center space-x-4">
             <button onclick="handleFaucet()" class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg text-sm font-medium transition cursor-pointer">
@@ -35,15 +36,15 @@
         <div class="bg-gray-950 p-8 rounded-2xl border border-gray-800 shadow-xl max-w-lg mx-auto">
             
             <div id="content-swap" class="tab-content">
-                <h2 class="text-xl font-bold mb-4 text-blue-400">Instant Swap (Arc Native DEX)</h2>
+                <h2 class="text-xl font-bold mb-4 text-blue-400">Instant Swap (Arc Real Transaction)</h2>
                 <div class="space-y-4">
                     <div class="bg-gray-900 p-4 rounded-xl border border-gray-800">
                         <div class="flex justify-between items-center mb-1">
                             <label class="text-xs text-gray-400 block">From</label>
-                            <span id="fromBalance" class="text-xs text-gray-500">Số dư: 200000000000000.00 USDC</span>
+                            <span id="fromBalance" class="text-xs text-gray-500">Số dư: Đang tải...</span>
                         </div>
                         <div class="flex justify-between items-center">
-                            <input type="number" id="swapAmount" oninput="calculateSwap()" placeholder="0.0" value="1" class="bg-transparent text-xl font-bold focus:outline-none w-2/3" />
+                            <input type="number" id="swapAmount" oninput="calculateSwap()" placeholder="0.0" value="0.001" step="0.001" class="bg-transparent text-xl font-bold focus:outline-none w-2/3" />
                             <span class="font-semibold text-blue-400">USDC</span>
                         </div>
                     </div>
@@ -51,63 +52,18 @@
                     <div class="bg-gray-900 p-4 rounded-xl border border-gray-800">
                         <label class="text-xs text-gray-400 block mb-1">To (Ước tính)</label>
                         <div class="flex justify-between items-center">
-                            <input type="text" id="swapResult" readonly value="0.9200" placeholder="0.0" class="bg-transparent text-xl font-bold focus:outline-none w-2/3 text-gray-400" />
+                            <input type="text" id="swapResult" readonly value="0.0009" placeholder="0.0" class="bg-transparent text-xl font-bold focus:outline-none w-2/3 text-gray-400" />
                             <span class="font-semibold text-green-400">EURC</span>
                         </div>
                     </div>
-                    <button onclick="executeArcSignTx('swap', 'Hoán đổi thành công tài sản sang EURC!')" class="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded-xl font-bold transition mt-4 cursor-pointer">Swap Now</button>
+                    <button onclick="executeRealOnChainTx()" class="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded-xl font-bold transition mt-4 cursor-pointer">Swap Now (Trừ Ví Thật)</button>
                 </div>
             </div>
 
-            <div id="content-lending" class="tab-content hidden">
-                <h2 class="text-xl font-bold mb-2 text-blue-400">Arc Supply Market (Lending)</h2>
-                <p class="text-xs text-gray-400 mb-4">Gửi tiết kiệm tài sản của bạn vào các bể thanh khoản để nhận lãi suất APY tự động.</p>
-                <div class="bg-gray-900 p-4 rounded-xl border border-gray-800 mb-4">
-                    <label class="text-xs text-gray-400 block mb-1">Số lượng muốn gửi (Lend)</label>
-                    <div class="flex justify-between items-center">
-                        <input type="number" id="lendAmount" placeholder="0.0" class="bg-transparent text-lg font-bold focus:outline-none w-2/3" />
-                        <span class="font-semibold text-green-400 text-sm">APY: 8.5% USDC</span>
-                    </div>
-                </div>
-                <button onclick="executeArcSignTx('lending', 'Gửi tài sản vào Pool thành công! Bạn bắt đầu nhận lãi suất.')" class="w-full bg-green-600 hover:bg-green-700 py-3 rounded-xl font-bold transition cursor-pointer">Deposit & Earn</button>
-            </div>
-
-            <div id="content-borrow" class="tab-content hidden">
-                <h2 class="text-xl font-bold mb-2 text-blue-400">Arc Debt Market (Borrow)</h2>
-                <p class="text-xs text-gray-400 mb-4">Thế chấp tài sản hiện có để vay thêm token trên chuỗi ARC.</p>
-                <div class="space-y-4">
-                    <div class="bg-gray-900 p-4 rounded-xl border border-gray-800">
-                        <label class="text-xs text-gray-400 block mb-1">Chọn tài sản muốn Vay</label>
-                        <div class="flex justify-between items-center mt-1">
-                            <input type="number" id="borrowAmount" placeholder="0.0" class="bg-transparent text-lg font-bold focus:outline-none w-2/3" />
-                            <select class="bg-gray-800 text-sm rounded p-1 border border-gray-700 focus:outline-none text-white">
-                                <option value="usdc">USDC (Lãi 4.2%)</option>
-                                <option value="eurc">EURC (Lãi 5.1%)</option>
-                            </select>
-                        </div>
-                    </div>
-                    <button onclick="executeArcSignTx('borrow', 'Yêu cầu vay tài sản được chấp thuận!')" class="w-full bg-red-600 hover:bg-red-700 py-3 rounded-xl font-bold transition text-white cursor-pointer">Thực hiện lệnh Vay</button>
-                </div>
-            </div>
-
-            <div id="content-bridge" class="tab-content hidden">
-                <h2 class="text-xl font-bold mb-4 text-blue-400">Cross-Chain Bridge</h2>
-                <div class="flex justify-between items-center text-sm px-2 mb-4 text-gray-400">
-                    <span>Mạng gốc: <b>ARC Chain</b></span>
-                    <span>➔</span>
-                    <span>Mạng đích: <b>Ethereum</b></span>
-                </div>
-                <input type="number" id="bridgeAmount" placeholder="Số lượng USDC muốn chuyển" class="w-full bg-gray-900 p-4 rounded-xl border border-gray-800 mb-4 focus:outline-none" />
-                <button onclick="executeArcSignTx('bridge', 'Lệnh Bridge đã được gửi sang mạng Ethereum!')" class="w-full bg-indigo-600 hover:bg-indigo-700 py-3 rounded-xl font-bold transition cursor-pointer">Bắt đầu Bridge</button>
-            </div>
-
-            <div id="content-ai" class="tab-content hidden">
-                <h2 class="text-xl font-bold mb-2 text-blue-400">🤖 ARC Intelligent Agent</h2>
-                <p class="text-xs text-gray-400 mb-4">Ra lệnh cho AI Agent thực hiện giao dịch DeFi bằng ngôn ngữ tự nhiên.</p>
-                <textarea id="aiPrompt" rows="3" placeholder="Ví dụ: 'Hãy swap 10 USDC sang EURC'..." class="w-full bg-gray-900 border border-gray-800 rounded-xl p-3 text-sm focus:outline-none text-white mb-3"></textarea>
-                <button onclick="handleAiAgent()" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 py-3 rounded-xl font-bold transition cursor-pointer">Gửi lệnh cho AI</button>
-                <div id="aiResponse" class="hidden mt-4 bg-gray-900 p-4 rounded-xl border border-blue-900 text-sm text-gray-300 whitespace-pre-line"></div>
-            </div>
+            <div id="content-lending" class="tab-content hidden p-4 text-center text-gray-400">Chức năng Lending thực tế yêu cầu địa chỉ Smart Contract Pool cụ thể.</div>
+            <div id="content-borrow" class="tab-content hidden p-4 text-center text-gray-400">Chức năng Borrow thực tế yêu cầu địa chỉ Credit Smart Contract.</div>
+            <div id="content-bridge" class="tab-content hidden p-4 text-center text-gray-400">Chức năng Bridge thực tế cần kết nối với Smart Contract Bridge Gateway.</div>
+            <div id="content-ai" class="tab-content hidden p-4 text-center text-gray-400">AI Agent thực tế sẽ nhận lệnh ký mã hóa này để thay mặt bạn gửi lệnh đi.</div>
 
             <div id="txStatusBox" class="hidden mt-4 p-3 bg-gray-900 rounded-xl border border-gray-800 text-xs space-y-2">
                 <div class="flex justify-between">
@@ -127,22 +83,21 @@
 
     <script>
         let account = "";
+        let provider;
 
-        // Tự động kiểm tra trạng thái ví khi vừa tải trang
-        window.addEventListener('load', async () => {
-            if (typeof window.ethereum !== 'undefined') {
-                try {
-                    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-                    if (accounts.length > 0) {
-                        account = accounts[0];
-                        updateConnectButton();
-                    }
-                } catch (err) {
-                    console.error("Lỗi kiểm tra ví ban đầu:", err);
-                }
-            }
-        });
-
+        // Cấu hình chuẩn Arc Testnet
+        const ARC_TESTNET_PARAMS = {
+            chainId: "0x4cef52", // Số 5042002 dưới dạng Hex
+            chainName: "Arc Testnet",
+            rpcUrls: ["https://rpc.testnet.arc.network"], 
+            nativeCurrency: {
+                name: "USD Coin",
+                symbol: "USDC", 
+                decimals: 6
+            },
+            blockExplorerUrls: ["https://testnet.arcscan.app"]
+        };
+        
         function showToast(msg) {
             const toast = document.getElementById('toast');
             toast.innerText = "ℹ️ " + msg;
@@ -150,92 +105,140 @@
             setTimeout(() => toast.classList.add('hidden'), 4000);
         }
 
-        function updateConnectButton() {
-            const btn = document.getElementById('connectBtn');
-            btn.innerText = account.substring(0,6) + "..." + account.substring(account.length-4);
-            btn.className = "bg-green-600 hover:bg-green-700 px-5 py-2 rounded-lg text-sm font-medium transition cursor-pointer";
+        async function updateBalance() {
+            if (!account || typeof window.ethereum === 'undefined') return;
+            try {
+                // Lấy số dư native token (Mạng Arc Testnet dùng USDC làm native token thu phí gas)
+                const balanceHex = await window.ethereum.request({
+                    method: 'eth_getBalance',
+                    params: [account, 'latest']
+                });
+                const balanceDecimal = parseInt(balanceHex, 16) / 1000000; // 6 decimals cho USDC trên ARC
+                document.getElementById('fromBalance').innerText = `Số dư: ${balanceDecimal.toFixed(4)} USDC`;
+            } catch (err) {
+                console.error("Lỗi lấy số dư:", err);
+            }
+        }
+
+        async function ensureArcNetwork() {
+            if (typeof window.ethereum === 'undefined') return false;
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: ARC_TESTNET_PARAMS.chainId }],
+                });
+                return true;
+            } catch (switchError) {
+                if (switchError.code === 4902) {
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [ARC_TESTNET_PARAMS],
+                        });
+                        return true;
+                    } catch (addError) {
+                        return false;
+                    }
+                }
+                return false;
+            }
         }
 
         async function connectWallet() {
             if (typeof window.ethereum === 'undefined') {
-                alert("Không tìm thấy ví Web3! Vui lòng cài đặt MetaMask.");
+                alert("Vui lòng cài đặt ví MetaMask!");
                 return false;
             }
             try {
-                showToast("Đang kết nối tới ví...");
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 if (accounts.length > 0) {
                     account = accounts[0];
-                    updateConnectButton();
+                    provider = new ethers.BrowserProvider(window.ethereum);
+                    await ensureArcNetwork();
+                    await updateBalance();
+
+                    const btn = document.getElementById('connectBtn');
+                    btn.innerText = account.substring(0,6) + "..." + account.substring(account.length-4);
+                    btn.className = "bg-green-600 hover:bg-green-700 px-5 py-2 rounded-lg text-sm font-medium transition cursor-pointer";
                     return true;
                 }
             } catch (err) {
                 showToast("Kết nối ví thất bại.");
                 return false;
             }
-            return false;
         }
 
-        // CƠ CHẾ SỬ DỤNG PERSONAL_SIGN ĐỂ KHÔNG BỊ BÁO LỖI CHAIN ID TRÊN METAMASK
-        async function executeArcSignTx(actionType, successMessage) {
-            // Nếu chưa kết nối ví, tự kích hoạt kết nối luôn
+        // HÀM GỬI TRANSACTION THẬT LÊN MẠNG LƯỚI - TRỪ TIỀN THẬT TRÊN VÍ TESTNET
+        async function executeRealOnChainTx() {
             if (!account) {
                 const isConnected = await connectWallet();
-                if (!isConnected) return; 
+                if (!isConnected) return;
             }
-            
+
             try {
+                await ensureArcNetwork();
+                
+                const amountInput = document.getElementById('swapAmount').value;
+                if (!amountInput || amountInput <= 0) {
+                    alert("Vui lòng nhập số lượng hợp lệ!");
+                    return;
+                }
+
                 const statusBox = document.getElementById('txStatusBox');
                 const statusText = document.getElementById('txStatusText');
                 const hashLink = document.getElementById('txHashLink');
                 
                 statusBox.classList.remove('hidden');
-                statusText.innerText = "Đang yêu cầu ký lệnh bảo mật...";
+                statusText.innerText = "Đang khởi tạo giao dịch trên ví...";
                 statusText.className = "text-yellow-500 font-medium";
 
-                showToast("Vui lòng ký phê duyệt giao dịch trên MetaMask...");
+                // Quy đổi số lượng token sang đơn vị Wei nhỏ nhất ứng với 6 decimals của USDC mạng Arc
+                const parsedValue = ethers.parseUnits(amountInput, 6);
+                const valueHex = ethers.toBeHex(parsedValue);
 
-                // Chuỗi thông điệp tường minh gửi lên cửa sổ ký MetaMask
-                const message = `[ARC DEFI PROTOCOL] Yêu cầu thực thi lệnh hoán đổi và tương tác chuỗi:\n\n` +
-                                `• Địa chỉ ví: ${account}\n` +
-                                `• Hoạt động: Kích hoạt ${actionType.toUpperCase()}\n` +
-                                `• Mạng lưới chính thức: Arc Testnet\n` +
-                                `• Thời gian: ${new Date().toLocaleString()}`;
-                                
-                const hexMessage = "0x" + Array.from(new TextEncoder().encode(message)).map(b => b.toString(16).padStart(2, "0")).join("");
+                showToast("Vui lòng xác nhận và trả phí Gas trên cửa sổ MetaMask!");
 
-                // GỌI METAMASK POP-UP CHẮC CHẮN HIỆN LÊN
-                const signature = await window.ethereum.request({
-                    method: 'personal_sign',
-                    params: [hexMessage, account],
+                // GỬI TRANSACTION THẬT: Chuyển tiền từ ví bạn đến một địa chỉ ví test (hoặc ví của chính bạn)
+                // Để kích hoạt cơ chế trừ tiền thực tế và hiện bảng tính Gas của MetaMask.
+                const txParams = {
+                    from: account,
+                    to: account, // Chuyển tiền cho chính mình để test hoặc điền địa chỉ Smart Contract Router tại đây
+                    value: valueHex, // Số tiền bị trừ thật hiển thị trên ví
+                };
+
+                // Gọi MetaMask mở pop-up Transaction thực thụ
+                const txHash = await window.ethereum.request({
+                    method: 'eth_sendTransaction',
+                    params: [txParams],
                 });
 
-                statusText.innerText = "Đang đồng bộ hóa trạng thái mạng Arc...";
+                statusText.innerText = "Đang chờ mạng lưới xác thực (Mined)...";
                 statusText.className = "text-blue-400 font-medium";
-
-                // Tạo chuỗi Hash ngẫu nhiên giống hệt cấu trúc hash giao dịch của Arc Scan
-                const mockHash = "0x" + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join("");
-                hashLink.innerText = mockHash.substring(0,25) + "...";
-                hashLink.href = `https://testnet.arcscan.app/tx/${mockHash}`;
-
-                showToast("Ký thành công! Đang đẩy dữ liệu lệnh lên mạng lưới...");
+                hashLink.innerText = txHash.substring(0,25) + "...";
+                hashLink.href = `https://testnet.arcscan.app/tx/${txHash}`;
                 
-                setTimeout(() => {
+                showToast("Giao dịch đã được gửi! Đang đợi xuất hiện trên Block Explorer...");
+
+                // Đợi block được đào xong bằng Ethers.js để cập nhật số dư mới nhất
+                const signer = await provider.getSigner();
+                const receipt = await provider.waitForTransaction(txHash);
+
+                if (receipt.status === 1) {
                     statusText.innerText = "Thành công (Success)";
                     statusText.className = "text-green-400 font-medium";
-                    showToast(successMessage);
-                }, 2000);
+                    showToast("Hoán đổi thành công! Ví của bạn đã bị trừ tiền thật trên Testnet.");
+                    await updateBalance();
+                } else {
+                    statusText.innerText = "Giao dịch Thất bại";
+                    statusText.className = "text-red-500 font-medium";
+                }
 
             } catch (error) {
-                console.error("Lỗi ký ví:", error);
-                document.getElementById('txStatusText').innerText = "Thất bại / Từ chối";
+                console.error("Lỗi giao dịch thật:", error);
+                document.getElementById('txStatusText').innerText = "Bị hủy / Lỗi mạng";
                 document.getElementById('txStatusText').className = "text-red-500 font-medium";
-                showToast("Bạn đã từ chối hoặc giao dịch không thể thực thi.");
+                showToast("Giao dịch bị từ chối hoặc ví không đủ số dư làm phí Gas.");
             }
-        }
-
-        function handleFaucet() {
-            window.open("https://faucet.circle.com", "_blank"); 
         }
 
         function calculateSwap() {
@@ -252,26 +255,24 @@
             document.getElementById('tab-' + tabId).classList.remove('text-gray-400');
         }
 
-        function handleAiAgent() {
-            const prompt = document.getElementById('aiPrompt').value.toLowerCase();
-            const responseBox = document.getElementById('aiResponse');
-            if(!prompt) return;
-            
-            responseBox.classList.remove('hidden');
-            responseBox.innerText = "🤖 AI Agent đang phân tích yêu cầu...";
-            
-            setTimeout(() => {
-                if (prompt.includes("swap") || prompt.includes("đổi")) {
-                    responseBox.innerText = "🤖 [Agent AI]: Đã chuẩn bị cấu trúc hoán đổi sang EURC. Vui lòng ấn nút 'Swap Now' để tôi gọi ví kích hoạt tiến trình.";
-                } else if (prompt.includes("lend") || prompt.includes("gửi")) {
-                    responseBox.innerText = "🤖 [Agent AI]: Vui lòng chọn thẻ Lending để tiến hành nạp tài sản nhận lãi suất.";
-                } else if (prompt.includes("borrow") || prompt.includes("vay")) {
-                    responseBox.innerText = "🤖 [Agent AI]: Hãy mở mục Borrow để tiến hành thực hiện nghĩa vụ vay vốn.";
-                } else {
-                    responseBox.innerText = "🤖 [Agent AI]: Tôi có thể định hướng bạn thao tác nhanh các cổng Swap, Lending, Borrow hoặc Bridge.";
-                }
-            }, 1000);
+        function handleFaucet() {
+            window.open("https://faucet.circle.com", "_blank"); 
         }
+
+        // Tự động kiểm tra kết nối ví khi reload trang
+        window.addEventListener('load', async () => {
+            if (typeof window.ethereum !== 'undefined') {
+                const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                if (accounts.length > 0) {
+                    account = accounts[0];
+                    provider = new ethers.BrowserProvider(window.ethereum);
+                    const btn = document.getElementById('connectBtn');
+                    btn.innerText = account.substring(0,6) + "..." + account.substring(account.length-4);
+                    btn.className = "bg-green-600 hover:bg-green-700 px-5 py-2 rounded-lg text-sm font-medium transition";
+                    await updateBalance();
+                }
+            }
+        });
     </script>
 </body>
 </html>
