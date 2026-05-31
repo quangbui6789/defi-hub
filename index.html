@@ -29,12 +29,13 @@
 
     <!-- Main Content -->
     <main class="max-w-5xl mx-auto mt-12 p-4">
-        <!-- Tabs Menu -->
-        <div class="flex justify-center space-x-2 bg-gray-950 p-2 rounded-xl mb-8 max-w-md mx-auto border border-gray-800">
-            <button onclick="switchTab('swap')" id="tab-swap" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600">Swap</button>
-            <button onclick="switchTab('lending')" id="tab-lending" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-gray-400">Lending</button>
-            <button onclick="switchTab('bridge')" id="tab-bridge" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-gray-400">Bridge</button>
-            <button onclick="switchTab('ai')" id="tab-ai" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-gray-400">AI Agent</button>
+        <!-- Tabs Menu điều hướng mở rộng thêm mục Borrow -->
+        <div class="flex justify-center space-x-1 bg-gray-950 p-2 rounded-xl mb-8 max-w-lg mx-auto border border-gray-800 overflow-x-auto">
+            <button onclick="switchTab('swap')" id="tab-swap" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 whitespace-nowrap">Swap</button>
+            <button onclick="switchTab('lending')" id="tab-lending" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-gray-400 whitespace-nowrap">Lending</button>
+            <button onclick="switchTab('borrow')" id="tab-borrow" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-gray-400 whitespace-nowrap">Borrow</button>
+            <button onclick="switchTab('bridge')" id="tab-bridge" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-gray-400 whitespace-nowrap">Bridge</button>
+            <button onclick="switchTab('ai')" id="tab-ai" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-gray-400 whitespace-nowrap">AI Agent</button>
         </div>
 
         <!-- Khung nội dung chức năng -->
@@ -65,12 +66,38 @@
 
             <!-- LENDING -->
             <div id="content-lending" class="tab-content hidden">
-                <h2 class="text-xl font-bold mb-4 text-blue-400">Arc Money Market</h2>
-                <p class="text-xs text-gray-400 mb-4">Gửi tiết kiệm nhận lãi suất hoặc thế chấp tài sản để vay trên mạng ARC Testnet.</p>
-                <input type="number" placeholder="Nhập số lượng tUSDT" class="w-full bg-gray-900 p-4 rounded-xl border border-gray-800 mb-4 focus:outline-none" />
-                <div class="grid grid-cols-2 gap-4">
-                    <button onclick="executeAction('Gửi tài sản vào Pool thành công!')" class="bg-green-600 hover:bg-green-700 py-3 rounded-xl font-bold transition">Deposit (Lend)</button>
-                    <button onclick="executeAction('Vay tài sản (Borrow) thành công!')" class="border border-red-500 text-red-400 hover:bg-red-950 py-3 rounded-xl font-bold transition">Borrow</button>
+                <h2 class="text-xl font-bold mb-2 text-blue-400">Arc Supply Market (Lending)</h2>
+                <p class="text-xs text-gray-400 mb-4">Gửi tiết kiệm tài sản của bạn vào các bể thanh khoản để nhận lãi suất APY tự động.</p>
+                <div class="bg-gray-900 p-4 rounded-xl border border-gray-800 mb-4">
+                    <label class="text-xs text-gray-400 block mb-1">Số lượng muốn gửi (Lend)</label>
+                    <div class="flex justify-between items-center">
+                        <input type="number" placeholder="0.0" class="bg-transparent text-lg font-bold focus:outline-none w-2/3" />
+                        <span class="font-semibold text-green-400 text-sm">APY: 8.5%</span>
+                    </div>
+                </div>
+                <button onclick="executeAction('Gửi tài sản vào Pool thành công! Bạn bắt đầu nhận lãi suất.')" class="w-full bg-green-600 hover:bg-green-700 py-3 rounded-xl font-bold transition">Deposit & Earn</button>
+            </div>
+
+            <!-- BORROW (MỤC MỚI ĐÃ ĐƯỢC TÁCH RIÊNG) -->
+            <div id="content-borrow" class="tab-content hidden">
+                <h2 class="text-xl font-bold mb-2 text-blue-400">Arc Debt Market (Borrow)</h2>
+                <p class="text-xs text-gray-400 mb-4">Thế chấp tài sản hiện có để vay thêm token trên chuỗi ARC (Yêu cầu giữ tỷ lệ an toàn sức khỏe ví trên 1.1).</p>
+                <div class="space-y-4">
+                    <div class="bg-gray-900 p-4 rounded-xl border border-gray-800">
+                        <label class="text-xs text-gray-400 block mb-1">Chọn tài sản muốn Vay</label>
+                        <div class="flex justify-between items-center mt-1">
+                            <input type="number" placeholder="0.0" class="bg-transparent text-lg font-bold focus:outline-none w-2/3" />
+                            <select class="bg-gray-800 text-sm rounded p-1 border border-gray-700 focus:outline-none">
+                                <option value="usdt">tUSDT (Lãi 4.2%)</option>
+                                <option value="btc">tBTC (Lãi 5.1%)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-gray-900/50 rounded-xl border border-gray-800 text-xs text-gray-400 space-y-1">
+                        <div class="flex justify-between"><span>Giới hạn vay tối đa:</span><span class="text-gray-200 font-medium">80% Giá trị thế chấp</span></div>
+                        <div class="flex justify-between"><span>Tỷ lệ thanh lý dự kiến:</span><span class="text-red-400 font-medium">120%</span></div>
+                    </div>
+                    <button onclick="executeAction('Yêu cầu vay tài sản được chấp thuận! Mã thông báo đã được gửi về ví của bạn.')" class="w-full bg-red-600 hover:bg-red-700 py-3 rounded-xl font-bold transition text-white">Thực hiện lệnh Vay</button>
                 </div>
             </div>
 
@@ -90,7 +117,7 @@
             <div id="content-ai" class="tab-content hidden">
                 <h2 class="text-xl font-bold mb-2 text-blue-400">🤖 ARC Intelligent Agent</h2>
                 <p class="text-xs text-gray-400 mb-4">Ra lệnh cho AI Agent thực hiện giao dịch DeFi bằng ngôn ngữ tự nhiên.</p>
-                <textarea id="aiPrompt" rows="3" placeholder="Ví dụ: 'Hãy swap giúp tôi 50 USDT sang tBTC'..." class="w-full bg-gray-900 border border-gray-800 rounded-xl p-3 text-sm focus:outline-none text-white mb-3"></textarea>
+                <textarea id="aiPrompt" rows="3" placeholder="Ví dụ: 'Hãy vay giúp tôi 50 USDT' hoặc 'Thực hiện swap sang tBTC'..." class="w-full bg-gray-900 border border-gray-800 rounded-xl p-3 text-sm focus:outline-none text-white mb-3"></textarea>
                 <button onclick="handleAiAgent()" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 py-3 rounded-xl font-bold transition">Gửi lệnh cho AI</button>
                 <div id="aiResponse" class="hidden mt-4 bg-gray-900 p-4 rounded-xl border border-blue-900 text-sm text-gray-300 whitespace-pre-line"></div>
             </div>
@@ -165,8 +192,10 @@
                     responseBox.innerText = "🤖 [Agent AI]: Tôi phát hiện bạn muốn Swap. Tỷ giá tối ưu hiện tại trên mạng ARC: 1 tBTC = 43,000 tUSDT. Bạn có muốn tôi thực hiện ký lệnh ví tự động không?";
                 } else if (prompt.includes("lend") || prompt.includes("gửi")) {
                     responseBox.innerText = "🤖 [Agent AI]: Pool cho vay tUSDT đang có tỷ suất lợi nhuận cao nhất (APY 8.5%). Tôi đề xuất bạn dùng tính năng Lending.";
+                } else if (prompt.includes("borrow") || prompt.includes("vay")) {
+                    responseBox.innerText = "🤖 [Agent AI]: Tôi thấy lệnh Vay tài sản. Dựa trên số dư thế chấp của bạn, bạn có thể vay tối đa thêm 2,500 tUSDT ở mức an toàn. Tôi có nên khởi tạo lệnh vay ngay không?";
                 } else {
-                    responseBox.innerText = "🤖 [Agent AI]: Lệnh chưa rõ ràng. Tôi có thể thực thi các lệnh: 'Swap 100 USDT', 'Tìm bể lãi suất Lending tốt nhất', hoặc 'Bridge tài sản'.";
+                    responseBox.innerText = "🤖 [Agent AI]: Lệnh chưa rõ ràng. Tôi có thể thực thi các lệnh: 'Swap 100 USDT', 'Tìm bể lãi suất Lending tốt nhất', 'Vay tiền', hoặc 'Bridge tài sản'.";
                 }
             }, 1500);
         }
