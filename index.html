@@ -118,9 +118,9 @@
     <script>
         let account = "";
 
-        // Định nghĩa cấu hình Arc Testnet (Sử dụng USDC làm native gas token)
+        // Đồng bộ chuẩn hóa Chain ID dạng chuỗi hex chữ thường
         const ARC_TESTNET_PARAMS = {
-            chainId: "0x4CECE6", // Chain ID: 5042002 dạng hex
+            chainId: "0x4cece6", 
             chainName: "Arc Testnet",
             rpcUrls: ["https://arc-testnet.drpc.org"], 
             nativeCurrency: {
@@ -138,7 +138,6 @@
             setTimeout(() => toast.classList.add('hidden'), 4000);
         }
 
-        // Ép ví chuyển đổi hoặc thêm mạng Arc Testnet tự động
         async function ensureArcNetwork() {
             if (typeof window.ethereum === 'undefined') return false;
             try {
@@ -164,7 +163,6 @@
             }
         }
 
-        // Kết nối ví
         async function connectWallet() {
             if (typeof window.ethereum === 'undefined') {
                 alert("Không tìm thấy ví! Hãy dùng trình duyệt dApp của MetaMask/Rabby.");
@@ -177,8 +175,6 @@
                 
                 if (accounts.length > 0) {
                     account = accounts[0];
-                    
-                    // Gọi kiểm tra chuyển mạng Arc
                     await ensureArcNetwork();
 
                     document.getElementById('connectBtn').innerText = account.substring(0,6) + "..." + account.substring(account.length-4);
@@ -191,7 +187,6 @@
             }
         }
 
-        // Kích hoạt ký lệnh giao dịch và tính phí Gas bằng USDC Testnet
         async function executeArcTx(successMessage) {
             if (!account) {
                 return alert("Vui lòng kết nối ví ở góc phải trước!");
@@ -204,15 +199,14 @@
 
                 showToast("Đang yêu cầu ký giao dịch xác thực...");
 
-                // Khởi tạo Transaction Object truyền trực tiếp qua API window.ethereum
-                // maxFeePerGas ép cố định 20 Gwei (0x4A817C800) theo chuẩn Arc Testnet
+                // Cấu hình tham số giao dịch tương thích cao để loại bỏ lỗi Submit RPC Chain ID
                 const txParams = {
                     from: account,
-                    to: account, // Gửi transaction tuần hoàn về chính mình để test UI ký gas
+                    to: account, 
                     value: "0x0",
-                    gas: "0x249F0", // Tương đương 150,000 gas limit dạng hex
+                    gas: "0x249F0", 
                     maxFeePerGas: "0x4A817C800", 
-                    maxPriorityFeePerGas: "0x77359400" // 2 Gwei dạng hex
+                    maxPriorityFeePerGas: "0x77359400"
                 };
 
                 const txHash = await window.ethereum.request({
@@ -222,7 +216,6 @@
 
                 showToast("Giao dịch đang được xử lý... Hash: " + txHash.substring(0, 14) + "...");
                 
-                // Giả lập thời gian block confirmation
                 setTimeout(() => {
                     showToast(successMessage);
                 }, 3500);
@@ -237,12 +230,9 @@
             }
         }
 
-        // Điều hướng nhận token testnet
         function handleFaucet() {
             if(!account) return alert("Vui lòng kết nối ví ở góc phải trước!");
             showToast("Đang mở trang vòi cấp token USDC Gas Testnet mạng Arc...");
-            
-            // Tự động mở link faucet trong tab mới sau 1 giây. Bạn có thể thay link mong muốn tại đây.
             setTimeout(() => {
                 window.open("https://faucet.circle.com", "_blank"); 
             }, 1000);
