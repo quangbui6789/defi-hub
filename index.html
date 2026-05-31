@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ARC All-in-One DeFi & AI Hub</title>
-    <!-- Nhúng thư viện CSS Tailwind để làm giao diện đẹp -->
+    <!-- Nhúng thư viện CSS Tailwind -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <!-- Nhúng thư viện Ethers.js để tương tác với ví Metamask -->
+    <!-- Nhúng thư viện Ethers.js ổn định -->
     <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js" type="application/javascript"></script>
 </head>
 <body class="bg-gray-900 text-white font-sans min-h-screen">
@@ -29,7 +29,7 @@
 
     <!-- Main Content -->
     <main class="max-w-5xl mx-auto mt-12 p-4">
-        <!-- Tabs Menu điều hướng mở rộng thêm mục Borrow -->
+        <!-- Tabs Menu -->
         <div class="flex justify-center space-x-1 bg-gray-950 p-2 rounded-xl mb-8 max-w-lg mx-auto border border-gray-800 overflow-x-auto">
             <button onclick="switchTab('swap')" id="tab-swap" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 whitespace-nowrap">Swap</button>
             <button onclick="switchTab('lending')" id="tab-lending" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-gray-400 whitespace-nowrap">Lending</button>
@@ -78,16 +78,16 @@
                 <button onclick="executeAction('Gửi tài sản vào Pool thành công! Bạn bắt đầu nhận lãi suất.')" class="w-full bg-green-600 hover:bg-green-700 py-3 rounded-xl font-bold transition">Deposit & Earn</button>
             </div>
 
-            <!-- BORROW (MỤC MỚI ĐÃ ĐƯỢC TÁCH RIÊNG) -->
+            <!-- BORROW -->
             <div id="content-borrow" class="tab-content hidden">
                 <h2 class="text-xl font-bold mb-2 text-blue-400">Arc Debt Market (Borrow)</h2>
-                <p class="text-xs text-gray-400 mb-4">Thế chấp tài sản hiện có để vay thêm token trên chuỗi ARC (Yêu cầu giữ tỷ lệ an toàn sức khỏe ví trên 1.1).</p>
+                <p class="text-xs text-gray-400 mb-4">Thế chấp tài sản hiện có để vay thêm token trên chuỗi ARC.</p>
                 <div class="space-y-4">
                     <div class="bg-gray-900 p-4 rounded-xl border border-gray-800">
                         <label class="text-xs text-gray-400 block mb-1">Chọn tài sản muốn Vay</label>
                         <div class="flex justify-between items-center mt-1">
                             <input type="number" placeholder="0.0" class="bg-transparent text-lg font-bold focus:outline-none w-2/3" />
-                            <select class="bg-gray-800 text-sm rounded p-1 border border-gray-700 focus:outline-none">
+                            <select class="bg-gray-800 text-sm rounded p-1 border border-gray-700 focus:outline-none text-white">
                                 <option value="usdt">tUSDT (Lãi 4.2%)</option>
                                 <option value="btc">tBTC (Lãi 5.1%)</option>
                             </select>
@@ -139,22 +139,41 @@
             setTimeout(() => toast.classList.add('hidden'), 4000);
         }
 
+        // --- CẬP NHẬT CHUẨN HOÁ HÀM KẾT NỐI VÍ ---
         async function connectWallet() {
-            if (!window.ethereum) return alert("Vui lòng cài đặt ví Metamask!");
+            // Bước 1: Kiểm tra xem trình duyệt có ví điện tử không
+            if (typeof window.ethereum === 'undefined') {
+                alert("Không tìm thấy tiện ích ví! Nếu dùng điện thoại, vui lòng copy link này mở trong mục 'Trình duyệt' bên trong ứng dụng MetaMask.");
+                return;
+            }
+            
             try {
-                const provider = new ethers.providers.Web3Provider(window.ethereum);
-                await provider.send("eth_requestAccounts", []);
-                const signer = provider.getSigner();
-                account = await signer.getAddress();
-                document.getElementById('connectBtn').innerText = account.substring(0,6) + "..." + account.substring(account.length-4);
-                showToast("Đã kết nối ví thành công với mạng ARC Testnet!");
+                showToast("Đang yêu cầu MetaMask kết nối...");
+                // Bước 2: Yêu cầu tài khoản một cách trực tiếp nhất (Tương thích mọi mạng đang chọn trên ví)
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                
+                if (accounts.length > 0) {
+                    account = accounts[0];
+                    // Hiển thị dạng rút gọn 0x1234...abcd trên nút bấm
+                    document.getElementById('connectBtn').innerText = account.substring(0,6) + "..." + account.substring(account.length-4);
+                    document.getElementById('connectBtn').className = "bg-green-600 hover:bg-green-700 px-5 py-2 rounded-lg text-sm font-medium transition";
+                    showToast("Đã kết nối ví thành công!");
+                } else {
+                    showToast("Kết nối ví thất bại: Không tìm thấy tài khoản.");
+                }
             } catch (err) {
-                showToast("Kết nối ví thất bại.");
+                console.error(err);
+                // Trường hợp người dùng chủ động bấm từ chối hoặc lỗi nội bộ ví
+                if (err.code === 4001) {
+                    showToast("Bạn đã từ chối yêu cầu kết nối trên MetaMask.");
+                } else {
+                    showToast("Lỗi kết nối: Hãy mở khóa ví MetaMask trước.");
+                }
             }
         }
 
         function handleFaucet() {
-            if(!account) return alert("Vui lòng kết nối ví trước!");
+            if(!account) return alert("Vui lòng kết nối ví ở góc phải trước!");
             showToast("Đang xử lý cấp token testnet miễn phí ($tUSDT, $tBTC)...");
             setTimeout(() => showToast("Cấp token testnet thành công! Kiểm tra số dư ví."), 2500);
         }
@@ -166,7 +185,7 @@
 
         function executeAction(successMessage) {
             if(!account) return alert("Vui lòng kết nối ví trước!");
-            showToast("Đang gửi yêu cầu xác thực ví...");
+            showToast("Đang gửi yêu cầu xác thực lệnh tới ví...");
             setTimeout(() => showToast(successMessage), 2000);
         }
 
