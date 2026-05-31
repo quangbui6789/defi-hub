@@ -185,7 +185,7 @@
             <div class="input-group">
                 <label>
                     <span>Số lượng bán</span>
-                    <span class="balance-label">Ví: <span id="balance-swap">0.0</span></span>
+                    <span class="balance-label">Ví: <span id="balance-swap">0.0000</span></span>
                 </label>
                 <input type="number" id="swapAmountIn" placeholder="0.0">
             </div>
@@ -204,14 +204,14 @@
             <div class="input-group">
                 <label>
                     <span>Số lượng USDC nạp</span>
-                    <span class="balance-label">Ví: <span id="balance-liq-usdc">0.0</span></span>
+                    <span class="balance-label">Ví: <span id="balance-liq-usdc">0.0000</span></span>
                 </label>
                 <input type="number" id="liquidityUsdcAmount" placeholder="0.0">
             </div>
             <div class="input-group">
                 <label>
                     <span>Số lượng EURC nạp</span>
-                    <span class="balance-label">Ví: <span id="balance-liq-eurc">0.0</span></span>
+                    <span class="balance-label">Ví: <span id="balance-liq-eurc">0.0000</span></span>
                 </label>
                 <input type="number" id="liquidityEurcAmount" placeholder="0.0">
             </div>
@@ -230,7 +230,7 @@
             <div class="input-group">
                 <label>
                     <span>Số lượng muốn gửi</span>
-                    <span class="balance-label">Ví: <span id="balance-lending">0.0</span></span>
+                    <span class="balance-label">Ví: <span id="balance-lending">0.0000</span></span>
                 </label>
                 <input type="number" id="lendingAmount" placeholder="0.0">
             </div>
@@ -249,7 +249,7 @@
             <div class="input-group">
                 <label>
                     <span>Số lượng vay</span>
-                    <span class="balance-label">Ví: <span id="balance-borrow">0.0</span></span>
+                    <span class="balance-label">Ví: <span id="balance-borrow">0.0000</span></span>
                 </label>
                 <input type="number" id="borrowAmount" placeholder="0.0">
             </div>
@@ -275,7 +275,7 @@
             <div class="input-group">
                 <label>
                     <span>Số lượng chuyển</span>
-                    <span class="balance-label">Ví: <span id="balance-bridge">0.0</span></span>
+                    <span class="balance-label">Ví: <span id="balance-bridge">0.0000</span></span>
                 </label>
                 <input type="number" id="bridgeAmount" placeholder="0.0">
             </div>
@@ -290,9 +290,6 @@
     </div>
 
     <script>
-        // =========================================================================
-        // ĐÃ SỬA LỖI CHECKSUM - ĐƯA TẤT CẢ ĐỊA CHỈ VỀ LOWERCASE TOÀN BỘ
-        // =========================================================================
         const DEPLOYED_CONTRACTS = {
             USDC_TOKEN: "0x3600000000000000000000000000000000000000", 
             EURC_TOKEN: "0x89b50b55aa3be2f677cd6303cec089b5f319d72a", 
@@ -304,8 +301,7 @@
 
         const ERC20_ABI = [
             "function approve(address spender, uint256 amount) public returns (bool)",
-            "function balanceOf(address account) public view returns (uint256)",
-            "function decimals() public view returns (uint8)"
+            "function balanceOf(address account) public view returns (uint256)"
         ];
 
         const SWAP_POOL_ABI = [
@@ -336,18 +332,17 @@
             e.currentTarget.classList.add('active');
         }
 
+        // ĐÃ TỐI ƯU: Ép cứng hệ thập phân là 6 để giải quyết triệt để lỗi không nhận diện được decimals của EURC
         async function getTokenBalance(tokenAddress, account) {
             try {
-                if(!window.ethereum || !account) return "0.0";
+                if(!window.ethereum || !account) return "0.0000";
                 const provider = new ethers.BrowserProvider(window.ethereum);
                 const contract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
-                const [balance, decimals] = await Promise.all([
-                    contract.balanceOf(account),
-                    contract.decimals().catch(() => 6)
-                ]);
-                return parseFloat(ethers.formatUnits(balance, decimals)).toFixed(4);
+                const balance = await contract.balanceOf(account);
+                return parseFloat(ethers.formatUnits(balance, 6)).toFixed(4);
             } catch (err) {
-                return "0.0";
+                console.error("Lỗi lấy số dư token: ", err);
+                return "0.0000";
             }
         }
 
@@ -417,8 +412,7 @@
                 const tokenInContract = new ethers.Contract(fromAddress, ERC20_ABI, signer);
                 const swapContract = new ethers.Contract(targetRouter, SWAP_POOL_ABI, signer);
                 
-                const decimals = await tokenInContract.decimals().catch(() => 6);
-                const parsedAmountIn = ethers.parseUnits(amountIn, decimals);
+                const parsedAmountIn = ethers.parseUnits(amountIn, 6);
 
                 updateLog(`[1/2] Đang gọi quyền chi tiêu (Approve) ${fromSymbol}...`);
                 let approveTx = await tokenInContract.approve(targetRouter, parsedAmountIn);
@@ -434,7 +428,7 @@
 
                 updateLog(`Giao dịch thành công hoàn toàn!`);
                 alert("Hoán đổi thành công!");
-                await updateAllBalances(); 
+                setTimeout(async () => { await updateAllBalances(); }, 1000); 
             } catch (err) {
                 console.error(err);
                 updateLog("Giao dịch lỗi/bị hủy: " + (err.reason || err.message));
@@ -463,7 +457,7 @@
                 tx = await swapPool.addLiquidity(ethers.parseUnits(amountUSDC, 6), ethers.parseUnits(amountEURC, 6));
                 await tx.wait();
                 alert("Nạp thanh khoản thành công!");
-                await updateAllBalances();
+                setTimeout(async () => { await updateAllBalances(); }, 1000);
             } catch (err) { alert(err.message); }
         }
 
@@ -485,7 +479,7 @@
                 tx = await lending.deposit(tokenAddress, ethers.parseUnits(amount, 6));
                 await tx.wait();
                 alert("Lending thành công!");
-                await updateAllBalances();
+                setTimeout(async () => { await updateAllBalances(); }, 1000);
             } catch (err) { alert(err.message); }
         }
 
@@ -503,7 +497,7 @@
                 let tx = await lending.borrow(tokenAddress, ethers.parseUnits(amount, 6));
                 await tx.wait();
                 alert("Vay thành công!");
-                await updateAllBalances();
+                setTimeout(async () => { await updateAllBalances(); }, 1000);
             } catch (err) { alert(err.message); }
         }
 
@@ -529,7 +523,7 @@
                 tx = await bridge.bridgeAsset(targetChainId, tokenAddress, ethers.parseUnits(amount, 6), recipient, { value: ethers.parseEther("0.001") });
                 await tx.wait();
                 alert("Bridge thành công!");
-                await updateAllBalances();
+                setTimeout(async () => { await updateAllBalances(); }, 1000);
             } catch (err) { alert(err.message); }
         }
     </script>
