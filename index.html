@@ -118,7 +118,7 @@
     <script>
         let account = "";
 
-        // Đồng bộ chuẩn hóa Chain ID dạng chuỗi hex chữ thường
+        // Thông số cấu hình mạng Arc Testnet viết thường chuẩn hóa hex
         const ARC_TESTNET_PARAMS = {
             chainId: "0x4cece6", 
             chainName: "Arc Testnet",
@@ -165,7 +165,7 @@
 
         async function connectWallet() {
             if (typeof window.ethereum === 'undefined') {
-                alert("Không tìm thấy ví! Hãy dùng trình duyệt dApp của MetaMask/Rabby.");
+                alert("Không tìm thấy ví! Hãy dùng trình duyệt dApp của MetaMask.");
                 return;
             }
             
@@ -199,14 +199,15 @@
 
                 showToast("Đang yêu cầu ký giao dịch xác thực...");
 
-                // Cấu hình tham số giao dịch tương thích cao để loại bỏ lỗi Submit RPC Chain ID
+                // Bổ sung tham số chainId: "0x4cece6" vào txParams để triệt tiêu lỗi "invalid chain ID" của RPC
                 const txParams = {
                     from: account,
                     to: account, 
                     value: "0x0",
                     gas: "0x249F0", 
                     maxFeePerGas: "0x4A817C800", 
-                    maxPriorityFeePerGas: "0x77359400"
+                    maxPriorityFeePerGas: "0x77359400",
+                    chainId: "0x4cece6" 
                 };
 
                 const txHash = await window.ethereum.request({
@@ -225,7 +226,7 @@
                 if (error.code === 4001) {
                     showToast("Bạn đã từ chối ký giao dịch.");
                 } else {
-                    showToast("Giao dịch thất bại! Hãy chắc chắn số dư ví của bạn có đủ USDC mạng Arc Testnet để trả phí gas.");
+                    showToast("Giao dịch thất bại! Lỗi đồng bộ cấu hình chuỗi hoặc thiếu số dư gas.");
                 }
             }
         }
