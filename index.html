@@ -290,7 +290,6 @@
     </div>
 
     <script>
-        // Đã cập nhật chính xác checksum cho EURC_TOKEN của mạng Arc Testnet
         const DEPLOYED_CONTRACTS = {
             USDC_TOKEN: "0x3600000000000000000000000000000000000000", 
             EURC_TOKEN: "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a", 
@@ -333,57 +332,58 @@
             e.currentTarget.classList.add('active');
         }
 
-        // ĐÃ CHỈNH SỬA: Ép định dạng hiển thị chuỗi an toàn để không bị làm tròn về 0 khi giao dịch trừ tiền lẻ
         async function getTokenBalance(tokenAddress, account) {
             try {
                 if(!window.ethereum || !account) return "0.0000";
                 const provider = new ethers.BrowserProvider(window.ethereum);
                 const contract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
                 const balance = await contract.balanceOf(account);
-                
-                // Định dạng chuẩn 6 chữ số thập phân dựa theo đặc tả kỹ thuật của tài liệu
                 return ethers.formatUnits(balance, 6);
             } catch (err) {
-                console.error("Lỗi đồng bộ số dư RPC:", err);
+                console.error("Lỗi RPC balanceOf:", err);
                 return "0.0000";
             }
         }
 
-        // ĐÃ SỬA TOÀN DIỆN: Đảm bảo bộ chọn Token thay đổi thì nhãn giao diện hiển thị đúng số dư thực tế
         async function updateAllBalances() {
             if (!userAddress) return;
             try {
-                // Đồng bộ Tab Swap công khai dựa trên Token đang được chọn ở ô cấu hình
                 const swapFrom = document.getElementById('swapFromToken').value;
                 const swapTokenAddress = swapFrom === "USDC" ? DEPLOYED_CONTRACTS.USDC_TOKEN : DEPLOYED_CONTRACTS.EURC_TOKEN;
                 const balanceSwapRaw = await getTokenBalance(swapTokenAddress, userAddress);
                 document.getElementById('balance-swap').innerText = parseFloat(balanceSwapRaw).toFixed(4);
 
-                // Đồng bộ Tab Liquidity
                 const balLiqUsdc = await getTokenBalance(DEPLOYED_CONTRACTS.USDC_TOKEN, userAddress);
                 const balLiqEurc = await getTokenBalance(DEPLOYED_CONTRACTS.EURC_TOKEN, userAddress);
                 document.getElementById('balance-liq-usdc').innerText = parseFloat(balLiqUsdc).toFixed(4);
                 document.getElementById('balance-liq-eurc').innerText = parseFloat(balLiqEurc).toFixed(4);
 
-                // Đồng bộ Tab Lending
                 const lendToken = document.getElementById('lendingToken').value;
                 const lendTokenAddress = lendToken === "USDC" ? DEPLOYED_CONTRACTS.USDC_TOKEN : DEPLOYED_CONTRACTS.EURC_TOKEN;
                 const balLend = await getTokenBalance(lendTokenAddress, userAddress);
                 document.getElementById('balance-lending').innerText = parseFloat(balLend).toFixed(4);
 
-                // Đồng bộ Tab Borrow
                 const borrowToken = document.getElementById('borrowToken').value;
                 const borrowTokenAddress = borrowToken === "USDC" ? DEPLOYED_CONTRACTS.USDC_TOKEN : DEPLOYED_CONTRACTS.EURC_TOKEN;
                 const balBorrow = await getTokenBalance(borrowTokenAddress, userAddress);
                 document.getElementById('balance-borrow').innerText = parseFloat(balBorrow).toFixed(4);
 
-                // Đồng bộ Tab Bridge
                 const bridgeToken = document.getElementById('bridgeToken').value;
                 const bridgeTokenAddress = bridgeToken === "USDC" ? DEPLOYED_CONTRACTS.USDC_TOKEN : DEPLOYED_CONTRACTS.EURC_TOKEN;
                 const balBridge = await getTokenBalance(bridgeTokenAddress, userAddress);
                 document.getElementById('balance-bridge').innerText = parseFloat(balBridge).toFixed(4);
             } catch (error) {
-                console.error("Lỗi cập nhật danh mục số dư:", error);
+                console.error(error);
+            }
+        }
+
+        // ĐÊM NGƯỢC CẬP NHẬT TRỄ: Hàm hỗ trợ quét lại số dư nhiều lần liên tục sau giao dịch thành công để tránh delay của Node RPC
+        async function triggerMultiBalanceRefresh() {
+            const delays = [1000, 2500, 4000]; 
+            for (const delay of delays) {
+                await new Promise(resolve => setTimeout(resolve, delay));
+                await updateAllBalances();
+                console.log(`[RPC Sync] Đã cập nhật lại số dư tự động sau ${delay}ms`);
             }
         }
 
@@ -444,11 +444,11 @@
                 updateLog("Giao dịch đang được xử lý khai thác block: " + tx.hash);
                 await tx.wait();
 
-                updateLog(`Giao dịch thành công hoàn toàn! Hệ thống đang truy vấn lại số dư mới...`);
+                updateLog(`Giao dịch thành công! Hệ thống đang kích hoạt quét đồng bộ số dư...`);
                 alert("Hoán đổi thành công!");
                 
-                // Cưỡng bức cập nhật lại trạng thái ví sau khi số dư on-chain thay đổi
-                await updateAllBalances();
+                // Kích hoạt chu kỳ quét đa tầng để hiển thị số dư đã trừ chính xác nhất
+                await triggerMultiBalanceRefresh();
             } catch (err) {
                 console.error(err);
                 updateLog("Giao dịch lỗi/bị hủy: " + (err.reason || err.message));
@@ -477,7 +477,7 @@
                 tx = await swapPool.addLiquidity(ethers.parseUnits(amountUSDC, 6), ethers.parseUnits(amountEURC, 6));
                 await tx.wait();
                 alert("Nạp thanh khoản thành công!");
-                await updateAllBalances();
+                await triggerMultiBalanceRefresh();
             } catch (err) { alert(err.message); }
         }
 
@@ -499,7 +499,7 @@
                 tx = await lending.deposit(tokenAddress, ethers.parseUnits(amount, 6));
                 await tx.wait();
                 alert("Lending thành công!");
-                await updateAllBalances();
+                await triggerMultiBalanceRefresh();
             } catch (err) { alert(err.message); }
         }
 
@@ -517,7 +517,7 @@
                 let tx = await lending.borrow(tokenAddress, ethers.parseUnits(amount, 6));
                 await tx.wait();
                 alert("Vay thành công!");
-                await updateAllBalances();
+                await triggerMultiBalanceRefresh();
             } catch (err) { alert(err.message); }
         }
 
@@ -543,7 +543,7 @@
                 tx = await bridge.bridgeAsset(targetChainId, tokenAddress, ethers.parseUnits(amount, 6), recipient, { value: ethers.parseEther("0.001") });
                 await tx.wait();
                 alert("Bridge thành công!");
-                await updateAllBalances();
+                await triggerMultiBalanceRefresh();
             } catch (err) { alert(err.message); }
         }
     </script>
