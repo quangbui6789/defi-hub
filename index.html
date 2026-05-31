@@ -59,6 +59,15 @@
             font-weight: bold;
             display: none;
         }
+        .btn-faucet {
+            background-color: #a855f7;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
         .nav-tabs {
             display: flex;
             justify-content: center;
@@ -80,7 +89,7 @@
             color: white;
         }
         .container {
-            max-width: 500px;
+            max-width: 550px;
             margin: 0 auto;
             background-color: var(--card-bg);
             padding: 25px;
@@ -140,6 +149,10 @@
             font-size: 13px;
             word-break: break-all;
         }
+        .pool-input {
+            margin-top: 10px;
+            border: 1px dashed #4b5563 !important;
+        }
     </style>
 </head>
 <body>
@@ -147,6 +160,7 @@
     <div class="header">
         <div class="logo">ARC AI-DEFI HUB (REAL ON-CHAIN)</div>
         <div class="wallet-zone">
+            <button class="btn-faucet" onclick="window.open('https://testnet.arcscan.app', '_blank')">🎁 Faucet USDC / EURC</button>
             <button class="btn-connect" id="connectBtn" onclick="connectWallet()">Connect Wallet</button>
             <button class="btn-disconnect" id="disconnectBtn" onclick="disconnectWallet()">Disconnect</button>
         </div>
@@ -184,6 +198,10 @@
                     <option value="USDC">USDC</option>
                 </select>
             </div>
+            <div class="input-group">
+                <label>Địa chỉ Smart Contract Swap Pool</label>
+                <input type="text" id="swapPoolAddress" class="pool-input" placeholder="Nhập địa chỉ contract Swap Pool nếu có (Tùy chọn)">
+            </div>
             <button class="btn-action" onclick="uiSwap()">Xác Nhận Swap</button>
         </div>
 
@@ -202,6 +220,10 @@
                     <span class="balance-label">Ví: <span id="balance-liq-eurc">0.0</span></span>
                 </label>
                 <input type="number" id="liquidityEurcAmount" placeholder="0.0">
+            </div>
+            <div class="input-group">
+                <label>Địa chỉ Smart Contract Liquidity Pool</label>
+                <input type="text" id="liquidityPoolAddress" class="pool-input" placeholder="Nhập địa chỉ contract Liquidity Pool (Tùy chọn)">
             </div>
             <button class="btn-action" onclick="uiAddLiquidity()">Thêm Thanh Khoản</button>
         </div>
@@ -222,6 +244,10 @@
                 </label>
                 <input type="number" id="lendingAmount" placeholder="0.0">
             </div>
+            <div class="input-group">
+                <label>Địa chỉ Smart Contract Lending Pool</label>
+                <input type="text" id="lendingPoolAddress" class="pool-input" placeholder="Nhập địa chỉ contract Lending Pool (Tùy chọn)">
+            </div>
             <button class="btn-action" onclick="uiLending()">Xác Nhận Lending</button>
         </div>
 
@@ -240,6 +266,10 @@
                     <span class="balance-label">Ví: <span id="balance-borrow">0.0</span></span>
                 </label>
                 <input type="number" id="borrowAmount" placeholder="0.0">
+            </div>
+            <div class="input-group">
+                <label>Địa chỉ Smart Contract Borrow Pool</label>
+                <input type="text" id="borrowPoolAddress" class="pool-input" placeholder="Nhập địa chỉ contract Borrow Pool (Tùy chọn)">
             </div>
             <button class="btn-action" onclick="uiBorrow()">Xác Nhận Vay</button>
         </div>
@@ -271,6 +301,10 @@
                 <label>Địa chỉ ví nhận ở Chain đích</label>
                 <input type="text" id="bridgeRecipient" placeholder="0x...">
             </div>
+            <div class="input-group">
+                <label>Địa chỉ Smart Contract Bridge</label>
+                <input type="text" id="bridgeContractAddress" class="pool-input" placeholder="Nhập địa chỉ contract Bridge (Tùy chọn)">
+            </div>
             <button class="btn-action" onclick="uiBridge()">Kích Hoạt Cầu Nối</button>
         </div>
 
@@ -278,18 +312,16 @@
     </div>
 
     <script>
-        // --- HÃY ĐIỀN ĐỊA CHỈ CONTRACT THẬT CỦA BẠN VÀO ĐÂY ---
+        // --- ĐÃ ĐIỀN ĐỊA CHỈ CONTRACT CHÍNH THỨC TRÊN ARC TESTNET ---
         const DEPLOYED_CONTRACTS = {
-            USDC_TOKEN: "0x0000000000000000000000000000000000000001", 
-            EURC_TOKEN: "0x0000000000000000000000000000000000000002", 
-            SWAP_POOL: "0x0000000000000000000000000000000000000003",  
-            LENDING_POOL: "0x0000000000000000000000000000000000000004", 
-            BRIDGE_CONTRACT: "0x0000000000000000000000000000000000000005" 
+            USDC_TOKEN: "0x3600000000000000000000000000000000000000", 
+            EURC_TOKEN: "0x89B50B55Aa3bE2F677cD6303Cec089B5F319D72a"
         };
 
         const ERC20_ABI = [
             "function approve(address spender, uint256 amount) public returns (bool)",
-            "function balanceOf(address account) public view returns (uint256)"
+            "function balanceOf(address account) public view returns (uint256)",
+            "function decimals() public view returns (uint8)"
         ];
 
         const SWAP_POOL_ABI = [
@@ -320,23 +352,25 @@
             e.currentTarget.classList.add('active');
         }
 
-        // --- HÀM LẤY SỐ DƯ (BALANCE - MẶC ĐỊNH SỬ DỤNG 18 DECIMALS) ---
+        // Đọc số dư thật và chuẩn hóa Decimals = 6 từ Arc Testnet
         async function getTokenBalance(tokenAddress, account) {
             try {
                 if(!window.ethereum || !account) return "0.0";
                 const provider = new ethers.BrowserProvider(window.ethereum);
                 const contract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
-                const balance = await contract.balanceOf(account);
                 
-                // Đổi format thành 18 để hiển thị chuẩn xác số lượng token Testnet thông dụng
-                return parseFloat(ethers.formatUnits(balance, 18)).toFixed(4); 
+                const [balance, decimals] = await Promise.all([
+                    contract.balanceOf(account),
+                    contract.decimals().catch(() => 6) // Mặc định cấu hình hệ Decimals 6 cho Arc Testnet Tokens
+                ]);
+                
+                return parseFloat(ethers.formatUnits(balance, decimals)).toFixed(4); 
             } catch (err) {
-                console.warn("Lỗi đọc contract:", err.message);
+                console.warn("Lỗi đọc contract thực tế:", err.message);
                 return "0.0 (Error Contract)";
             }
         }
 
-        // --- CẬP NHẬT TẤT CẢ SỐ DƯ LÊN UI ---
         async function updateAllBalances() {
             if (!userAddress) return;
             try {
@@ -368,7 +402,6 @@
             }
         }
 
-        // --- HÀM KẾT NỐI VÍ ---
         async function connectWallet() {
             if (!window.ethereum) return alert("Vui lòng cài đặt MetaMask!");
             try {
@@ -387,10 +420,8 @@
             }
         }
 
-        // --- HÀM NGẮT KẾT NỐI VÍ ---
         function disconnectWallet() {
             userAddress = null;
-            
             document.getElementById('connectBtn').innerText = "Connect Wallet";
             document.getElementById('connectBtn').style.backgroundColor = "var(--success)";
             document.getElementById('disconnectBtn').style.display = "none";
@@ -401,7 +432,6 @@
             document.getElementById('balance-lending').innerText = "0.0";
             document.getElementById('balance-borrow').innerText = "0.0";
             document.getElementById('balance-bridge').innerText = "0.0";
-
             updateLog("Đã ngắt kết nối ví.");
         }
 
@@ -411,6 +441,7 @@
             const fromSymbol = document.getElementById('swapFromToken').value;
             const toSymbol = document.getElementById('swapToToken').value;
             const amountIn = document.getElementById('swapAmountIn').value;
+            const targetPool = document.getElementById('swapPoolAddress').value || "0x0000000000000000000000000000000000000003";
 
             if (fromSymbol === toSymbol) return alert("Mục Token nguồn và đích phải khác nhau!");
             if (!amountIn || amountIn <= 0) return alert("Vui lòng nhập số lượng hợp lệ!");
@@ -423,11 +454,13 @@
                 const signer = await provider.getSigner();
 
                 const tokenInContract = new ethers.Contract(fromAddress, ERC20_ABI, signer);
-                const swapContract = new ethers.Contract(DEPLOYED_CONTRACTS.SWAP_POOL, SWAP_POOL_ABI, signer);
-                const parsedAmountIn = ethers.parseUnits(amountIn, 18);
+                const swapContract = new ethers.Contract(targetPool, SWAP_POOL_ABI, signer);
+                
+                const decimals = await tokenInContract.decimals().catch(() => 6);
+                const parsedAmountIn = ethers.parseUnits(amountIn, decimals);
 
                 updateLog(`Đang duyệt chi (Approve) ${fromSymbol}...`);
-                let tx = await tokenInContract.approve(DEPLOYED_CONTRACTS.SWAP_POOL, parsedAmountIn);
+                let tx = await tokenInContract.approve(targetPool, parsedAmountIn);
                 await tx.wait();
 
                 updateLog(`Đang thực hiện lệnh Swap...`);
@@ -439,7 +472,7 @@
                 alert("Hoán đổi Token thành công!");
                 await updateAllBalances(); 
             } catch (err) {
-                updateLog("Lỗi Swap: " + err.message);
+                updateLog("Lỗi Swap (Cần điền chính xác địa chỉ contract Pool chức năng): " + err.message);
             }
         }
 
@@ -448,6 +481,7 @@
             if (!userAddress) return alert("Vui lòng kết nối ví trước!");
             const amountUSDC = document.getElementById('liquidityUsdcAmount').value;
             const amountEURC = document.getElementById('liquidityEurcAmount').value;
+            const targetPool = document.getElementById('liquidityPoolAddress').value || "0x0000000000000000000000000000000000000003";
             if (!amountUSDC || !amountEURC) return alert("Vui lòng nhập đầy đủ số lượng!");
 
             try {
@@ -456,17 +490,20 @@
 
                 const usdc = new ethers.Contract(DEPLOYED_CONTRACTS.USDC_TOKEN, ERC20_ABI, signer);
                 const eurc = new ethers.Contract(DEPLOYED_CONTRACTS.EURC_TOKEN, ERC20_ABI, signer);
-                const swapPool = new ethers.Contract(DEPLOYED_CONTRACTS.SWAP_POOL, SWAP_POOL_ABI, signer);
+                const swapPool = new ethers.Contract(targetPool, SWAP_POOL_ABI, signer);
 
-                const parsedUSDC = ethers.parseUnits(amountUSDC, 18); 
-                const parsedEURC = ethers.parseUnits(amountEURC, 18);
+                const decUsdc = await usdc.decimals().catch(() => 6);
+                const decEurc = await eurc.decimals().catch(() => 6);
+
+                const parsedUSDC = ethers.parseUnits(amountUSDC, decUsdc); 
+                const parsedEURC = ethers.parseUnits(amountEURC, decEurc);
 
                 updateLog("Đang Approve USDC...");
-                let tx = await usdc.approve(DEPLOYED_CONTRACTS.SWAP_POOL, parsedUSDC);
+                let tx = await usdc.approve(targetPool, parsedUSDC);
                 await tx.wait();
 
                 updateLog("Đang Approve EURC...");
-                tx = await eurc.approve(DEPLOYED_CONTRACTS.SWAP_POOL, parsedEURC);
+                tx = await eurc.approve(targetPool, parsedEURC);
                 await tx.wait();
 
                 updateLog("Đang nạp thanh khoản vào Pool...");
@@ -486,6 +523,7 @@
             if (!userAddress) return alert("Vui lòng kết nối ví trước!");
             const tokenSymbol = document.getElementById('lendingToken').value;
             const amount = document.getElementById('lendingAmount').value;
+            const targetPool = document.getElementById('lendingPoolAddress').value || "0x0000000000000000000000000000000000000004";
             if (!amount) return alert("Vui lòng nhập số lượng!");
 
             const tokenAddress = tokenSymbol === "USDC" ? DEPLOYED_CONTRACTS.USDC_TOKEN : DEPLOYED_CONTRACTS.EURC_TOKEN;
@@ -495,11 +533,13 @@
                 const signer = await provider.getSigner();
 
                 const token = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
-                const lending = new ethers.Contract(DEPLOYED_CONTRACTS.LENDING_POOL, LENDING_POOL_ABI, signer);
-                const parsedAmount = ethers.parseUnits(amount, 18);
+                const lending = new ethers.Contract(targetPool, LENDING_POOL_ABI, signer);
+                
+                const decimals = await token.decimals().catch(() => 6);
+                const parsedAmount = ethers.parseUnits(amount, decimals);
 
                 updateLog(`Đang Approve ${tokenSymbol}...`);
-                let tx = await token.approve(DEPLOYED_CONTRACTS.LENDING_POOL, parsedAmount);
+                let tx = await token.approve(targetPool, parsedAmount);
                 await tx.wait();
 
                 updateLog(`Đang nạp tài sản vào Lending Pool...`);
@@ -519,6 +559,7 @@
             if (!userAddress) return alert("Vui lòng kết nối ví trước!");
             const tokenSymbol = document.getElementById('borrowToken').value;
             const amount = document.getElementById('borrowAmount').value;
+            const targetPool = document.getElementById('borrowPoolAddress').value || "0x0000000000000000000000000000000000000004";
             if (!amount) return alert("Vui lòng nhập số lượng vay!");
 
             const tokenAddress = tokenSymbol === "USDC" ? DEPLOYED_CONTRACTS.USDC_TOKEN : DEPLOYED_CONTRACTS.EURC_TOKEN;
@@ -527,8 +568,11 @@
                 const provider = new ethers.BrowserProvider(window.ethereum);
                 const signer = await provider.getSigner();
 
-                const lending = new ethers.Contract(DEPLOYED_CONTRACTS.LENDING_POOL, LENDING_POOL_ABI, signer);
-                const parsedAmount = ethers.parseUnits(amount, 18);
+                const token = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+                const lending = new ethers.Contract(targetPool, LENDING_POOL_ABI, signer);
+                
+                const decimals = await token.decimals().catch(() => 6);
+                const parsedAmount = ethers.parseUnits(amount, decimals);
 
                 updateLog(`Đang xử lý yêu cầu vay ${amount} ${tokenSymbol}...`);
                 let tx = await lending.borrow(tokenAddress, parsedAmount);
@@ -549,6 +593,7 @@
             const tokenSymbol = document.getElementById('bridgeToken').value;
             const amount = document.getElementById('bridgeAmount').value;
             const recipient = document.getElementById('bridgeRecipient').value;
+            const targetBridge = document.getElementById('bridgeContractAddress').value || "0x0000000000000000000000000000000000000005";
 
             if (!amount || !recipient) return alert("Vui lòng nhập đủ thông tin!");
             const tokenAddress = tokenSymbol === "USDC" ? DEPLOYED_CONTRACTS.USDC_TOKEN : DEPLOYED_CONTRACTS.EURC_TOKEN;
@@ -559,11 +604,13 @@
                 const signer = await provider.getSigner();
 
                 const token = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
-                const bridge = new ethers.Contract(DEPLOYED_CONTRACTS.BRIDGE_CONTRACT, BRIDGE_ABI, signer);
-                const parsedAmount = ethers.parseUnits(amount, 18);
+                const bridge = new ethers.Contract(targetBridge, BRIDGE_ABI, signer);
+                
+                const decimals = await token.decimals().catch(() => 6);
+                const parsedAmount = ethers.parseUnits(amount, decimals);
 
                 updateLog(`Đang Approve tài sản ${tokenSymbol}...`);
-                let tx = await token.approve(DEPLOYED_CONTRACTS.BRIDGE_CONTRACT, parsedAmount);
+                let tx = await token.approve(targetBridge, parsedAmount);
                 await tx.wait();
 
                 updateLog(`Đang kích hoạt cầu nối sang mạng ${targetChain}...`);
