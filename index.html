@@ -118,7 +118,7 @@
     <script>
         let account = "";
 
-        // Thông số cấu hình mạng Arc Testnet viết thường chuẩn hóa hex
+        // Thông số cấu hình mạng Arc Testnet chuẩn
         const ARC_TESTNET_PARAMS = {
             chainId: "0x4cece6", 
             chainName: "Arc Testnet",
@@ -199,15 +199,13 @@
 
                 showToast("Đang yêu cầu ký giao dịch xác thực...");
 
-                // Bổ sung tham số chainId: "0x4cece6" vào txParams để triệt tiêu lỗi "invalid chain ID" của RPC
+                // THAY ĐỔI QUAN TRỌNG: Chuyển sang cấu trúc Legacy Tx để triệt tiêu hoàn toàn lỗi RPC Chain ID của dRPC
                 const txParams = {
                     from: account,
                     to: account, 
                     value: "0x0",
-                    gas: "0x249F0", 
-                    maxFeePerGas: "0x4A817C800", 
-                    maxPriorityFeePerGas: "0x77359400",
-                    chainId: "0x4cece6" 
+                    gas: "0x249F0", // ~150,000 gas limit
+                    gasPrice: "0x4A817C800" // Cố định 20 Gwei dạng Legacy, loại bỏ hoàn toàn các biến EIP-1559 gây lỗi
                 };
 
                 const txHash = await window.ethereum.request({
@@ -226,7 +224,7 @@
                 if (error.code === 4001) {
                     showToast("Bạn đã từ chối ký giao dịch.");
                 } else {
-                    showToast("Giao dịch thất bại! Lỗi đồng bộ cấu hình chuỗi hoặc thiếu số dư gas.");
+                    showToast("Giao dịch thất bại! Đảm bảo ví của bạn đang bật đúng mạng Arc Testnet và có số dư.");
                 }
             }
         }
