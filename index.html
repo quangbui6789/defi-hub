@@ -174,6 +174,7 @@
     </div>
 
     <div class="container">
+        <!-- 1. TAB SWAP -->
         <div id="swap-tab" class="tab-content active">
             <div class="input-group">
                 <label>Từ Token</label>
@@ -187,7 +188,7 @@
                     <span>Số lượng bán</span>
                     <span class="balance-label">Ví: <span id="balance-swap">0.0000</span></span>
                 </label>
-                <input type="number" id="swapAmountIn" placeholder="0.0" value="1">
+                <input type="number" id="swapAmountIn" placeholder="0.0" value="2">
             </div>
             <div class="input-group">
                 <label>Đến Token</label>
@@ -199,6 +200,7 @@
             <button class="btn-action" onclick="uiSwap()">Xác Nhận Swap</button>
         </div>
 
+        <!-- 2. TAB LIQUIDITY -->
         <div id="liquidity-tab" class="tab-content">
             <h3>Liquidity Pool</h3>
             <div class="input-group">
@@ -218,6 +220,7 @@
             <button class="btn-action" onclick="uiAddLiquidity()">Thêm Thanh Khoản</button>
         </div>
 
+        <!-- 3. TAB LENDING -->
         <div id="lending-tab" class="tab-content">
             <h3>Lending Pool</h3>
             <div class="input-group">
@@ -237,6 +240,7 @@
             <button class="btn-action" onclick="uiLending()">Xác Nhận Lending</button>
         </div>
 
+        <!-- 4. TAB BORROW -->
         <div id="borrow-tab" class="tab-content">
             <h3>Borrow (Vay)</h3>
             <div class="input-group">
@@ -256,6 +260,7 @@
             <button class="btn-action" onclick="uiBorrow()">Xác Nhận Vay</button>
         </div>
 
+        <!-- 5. TAB BRIDGE -->
         <div id="bridge-tab" class="tab-content">
             <h3>Cross-Chain Bridge</h3>
             <div class="input-group">
@@ -290,16 +295,20 @@
     </div>
 
     <script>
-        // Địa chỉ Checksum chuẩn hóa theo quy tắc mã hash EIP-55 thực tế
-        const DEPLOYED_CONTRACTS = {
+        // Chuyển toàn bộ địa chỉ thành lowercase gốc để không bị sai lệch chuẩn hóa thủ công
+        const RAW_CONTRACTS = {
             USDC_TOKEN: "0x3600000000000000000000000000000000000000", 
-            EURC_TOKEN: "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a", 
-            SWAP_POOL_ROUTER: "0x6e668380DFD601362dE6916B3D66bb11cee0294e", 
-            LENDING_POOL: "0x980f1a6A5b92C7f723Ac2169E2eBF73b88B8CBe0",
-            BRIDGE_CONTRACT: "0xd10904F6d8A29397686B24d776472481f4b41Ebf"
+            EURC_TOKEN: "0x89b50855aa3be2f677cd6303cec089b5f319d72a", 
+            SWAP_POOL_ROUTER: "0x6e668380dfd601362de6916b3d66bb11cee0294e", 
+            LENDING_POOL: "0x980f1a6a5b92c7f723ac2169e2ebf73b88b8cbe0",
+            BRIDGE_CONTRACT: "0xd10904f6d8a29397686b24d776472481f4b41ebf"
         };
 
-        // ĐÃ FIX: Sửa uint226 thành uint256 hợp lệ cho tiêu chuẩn ERC-20
+        // Hàm helper tự động ép Ethers v6 lấy Checksum Address an toàn 100%
+        function getSafeAddress(addr) {
+            return ethers.getAddress(addr.toLowerCase());
+        }
+
         const ERC20_ABI = [
             "function approve(address spender, uint256 amount) public returns (bool)",
             "function balanceOf(address account) public view returns (uint256)"
@@ -350,11 +359,12 @@
             try {
                 if(!window.ethereum || !account) return "0.0000";
                 const provider = new ethers.BrowserProvider(window.ethereum);
-                const contract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
-                const balance = await contract.balanceOf(account);
+                // Áp dụng bọc Checksum an toàn tại đây
+                const contract = new ethers.Contract(getSafeAddress(tokenAddress), ERC20_ABI, provider);
+                const balance = await contract.balanceOf(getSafeAddress(account));
                 return ethers.formatUnits(balance, 6);
             } catch (err) {
-                console.error("Lỗi đọc số dư từ RPC:", err);
+                console.error("Lỗi RPC balanceOf:", err);
                 return "0.0000";
             }
         }
@@ -363,31 +373,31 @@
             if (!userAddress) return;
             try {
                 const swapFrom = document.getElementById('swapFromToken').value;
-                const swapTokenAddress = swapFrom === "USDC" ? DEPLOYED_CONTRACTS.USDC_TOKEN : DEPLOYED_CONTRACTS.EURC_TOKEN;
+                const swapTokenAddress = swapFrom === "USDC" ? RAW_CONTRACTS.USDC_TOKEN : RAW_CONTRACTS.EURC_TOKEN;
                 const balanceSwapRaw = await getTokenBalance(swapTokenAddress, userAddress);
                 document.getElementById('balance-swap').innerText = parseFloat(balanceSwapRaw).toFixed(4);
 
-                const balLiqUsdc = await getTokenBalance(DEPLOYED_CONTRACTS.USDC_TOKEN, userAddress);
-                const balLiqEurc = await getTokenBalance(DEPLOYED_CONTRACTS.EURC_TOKEN, userAddress);
+                const balLiqUsdc = await getTokenBalance(RAW_CONTRACTS.USDC_TOKEN, userAddress);
+                const balLiqEurc = await getTokenBalance(RAW_CONTRACTS.EURC_TOKEN, userAddress);
                 document.getElementById('balance-liq-usdc').innerText = parseFloat(balLiqUsdc).toFixed(4);
                 document.getElementById('balance-liq-eurc').innerText = parseFloat(balLiqEurc).toFixed(4);
 
                 const lendToken = document.getElementById('lendingToken').value;
-                const lendTokenAddress = lendToken === "USDC" ? DEPLOYED_CONTRACTS.USDC_TOKEN : DEPLOYED_CONTRACTS.EURC_TOKEN;
+                const lendTokenAddress = lendToken === "USDC" ? RAW_CONTRACTS.USDC_TOKEN : RAW_CONTRACTS.EURC_TOKEN;
                 const balLend = await getTokenBalance(lendTokenAddress, userAddress);
                 document.getElementById('balance-lending').innerText = parseFloat(balLend).toFixed(4);
 
                 const borrowToken = document.getElementById('borrowToken').value;
-                const borrowTokenAddress = borrowToken === "USDC" ? DEPLOYED_CONTRACTS.USDC_TOKEN : DEPLOYED_CONTRACTS.EURC_TOKEN;
+                const borrowTokenAddress = borrowToken === "USDC" ? RAW_CONTRACTS.USDC_TOKEN : RAW_CONTRACTS.EURC_TOKEN;
                 const balBorrow = await getTokenBalance(borrowTokenAddress, userAddress);
                 document.getElementById('balance-borrow').innerText = parseFloat(balBorrow).toFixed(4);
 
                 const bridgeToken = document.getElementById('bridgeToken').value;
-                const bridgeTokenAddress = bridgeToken === "USDC" ? DEPLOYED_CONTRACTS.USDC_TOKEN : DEPLOYED_CONTRACTS.EURC_TOKEN;
+                const bridgeTokenAddress = bridgeToken === "USDC" ? RAW_CONTRACTS.USDC_TOKEN : RAW_CONTRACTS.EURC_TOKEN;
                 const balBridge = await getTokenBalance(bridgeTokenAddress, userAddress);
                 document.getElementById('balance-bridge').innerText = parseFloat(balBridge).toFixed(4);
             } catch (error) {
-                console.error("Lỗi cập nhật danh sách hiển thị số dư:", error);
+                console.error(error);
             }
         }
 
@@ -407,7 +417,7 @@
                 userAddress = accounts[0];
                 document.getElementById('connectBtn').innerText = userAddress.substring(0, 6) + "..." + userAddress.substring(38);
                 document.getElementById('disconnectBtn').style.display = "inline-block";
-                updateLog("Đã kết nối ví thành công: " + userAddress);
+                updateLog("Đã kết nối ví: " + userAddress);
                 await updateAllBalances();
             } catch (err) {
                 updateLog("Lỗi kết nối ví: " + err.message);
@@ -418,7 +428,6 @@
             userAddress = null;
             document.getElementById('connectBtn').innerText = "Connect Wallet";
             document.getElementById('disconnectBtn').style.display = "none";
-            document.getElementById('balance-swap').innerText = "0.0000";
             updateLog("Đã ngắt kết nối ví.");
         }
 
@@ -428,13 +437,14 @@
             const toSymbol = document.getElementById('swapToToken').value;
             const amountIn = document.getElementById('swapAmountIn').value;
             
-            const targetRouter = DEPLOYED_CONTRACTS.SWAP_POOL_ROUTER;
+            // Tự động giải quyết Checksum an toàn khi chuyển đổi
+            const targetRouter = getSafeAddress(RAW_CONTRACTS.SWAP_POOL_ROUTER);
 
             if (fromSymbol === toSymbol) return alert("Token nguồn và đích phải khác nhau!");
             if (!amountIn || amountIn <= 0) return alert("Vui lòng nhập số lượng hợp lệ!");
 
-            const fromAddress = fromSymbol === "USDC" ? DEPLOYED_CONTRACTS.USDC_TOKEN : DEPLOYED_CONTRACTS.EURC_TOKEN;
-            const toAddress = toSymbol === "USDC" ? DEPLOYED_CONTRACTS.USDC_TOKEN : DEPLOYED_CONTRACTS.EURC_TOKEN;
+            const fromAddress = getSafeAddress(fromSymbol === "USDC" ? RAW_CONTRACTS.USDC_TOKEN : RAW_CONTRACTS.EURC_TOKEN);
+            const toAddress = getSafeAddress(toSymbol === "USDC" ? RAW_CONTRACTS.USDC_TOKEN : RAW_CONTRACTS.EURC_TOKEN);
 
             try {
                 const provider = new ethers.BrowserProvider(window.ethereum);
@@ -472,13 +482,13 @@
             if (!userAddress) return alert("Vui lòng kết nối ví trước!");
             const amountUSDC = document.getElementById('liquidityUsdcAmount').value;
             const amountEURC = document.getElementById('liquidityEurcAmount').value;
-            const targetPool = DEPLOYED_CONTRACTS.SWAP_POOL_ROUTER;
+            const targetPool = getSafeAddress(RAW_CONTRACTS.SWAP_POOL_ROUTER);
 
             try {
                 const provider = new ethers.BrowserProvider(window.ethereum);
                 const signer = await provider.getSigner();
-                const usdc = new ethers.Contract(DEPLOYED_CONTRACTS.USDC_TOKEN, ERC20_ABI, signer);
-                const eurc = new ethers.Contract(DEPLOYED_CONTRACTS.EURC_TOKEN, ERC20_ABI, signer);
+                const usdc = new ethers.Contract(getSafeAddress(RAW_CONTRACTS.USDC_TOKEN), ERC20_ABI, signer);
+                const eurc = new ethers.Contract(getSafeAddress(RAW_CONTRACTS.EURC_TOKEN), ERC20_ABI, signer);
                 const swapPool = new ethers.Contract(targetPool, SWAP_POOL_ABI, signer);
 
                 let tx = await usdc.approve(targetPool, ethers.parseUnits(amountUSDC, 6));
@@ -497,8 +507,8 @@
             if (!userAddress) return alert("Vui lòng kết nối ví trước!");
             const tokenSymbol = document.getElementById('lendingToken').value;
             const amount = document.getElementById('lendingAmount').value;
-            const targetPool = DEPLOYED_CONTRACTS.LENDING_POOL;
-            const tokenAddress = tokenSymbol === "USDC" ? DEPLOYED_CONTRACTS.USDC_TOKEN : DEPLOYED_CONTRACTS.EURC_TOKEN;
+            const targetPool = getSafeAddress(RAW_CONTRACTS.LENDING_POOL);
+            const tokenAddress = getSafeAddress(tokenSymbol === "USDC" ? RAW_CONTRACTS.USDC_TOKEN : RAW_CONTRACTS.EURC_TOKEN);
 
             try {
                 const provider = new ethers.BrowserProvider(window.ethereum);
@@ -519,8 +529,8 @@
             if (!userAddress) return alert("Vui lòng kết nối ví trước!");
             const tokenSymbol = document.getElementById('borrowToken').value;
             const amount = document.getElementById('borrowAmount').value;
-            const targetPool = DEPLOYED_CONTRACTS.LENDING_POOL;
-            const tokenAddress = tokenSymbol === "USDC" ? DEPLOYED_CONTRACTS.USDC_TOKEN : DEPLOYED_CONTRACTS.EURC_TOKEN;
+            const targetPool = getSafeAddress(RAW_CONTRACTS.LENDING_POOL);
+            const tokenAddress = getSafeAddress(tokenSymbol === "USDC" ? RAW_CONTRACTS.USDC_TOKEN : RAW_CONTRACTS.EURC_TOKEN);
 
             try {
                 const provider = new ethers.BrowserProvider(window.ethereum);
@@ -539,9 +549,9 @@
             const tokenSymbol = document.getElementById('bridgeToken').value;
             const amount = document.getElementById('bridgeAmount').value;
             const recipient = document.getElementById('bridgeRecipient').value;
-            const targetBridge = DEPLOYED_CONTRACTS.BRIDGE_CONTRACT;
+            const targetBridge = getSafeAddress(RAW_CONTRACTS.BRIDGE_CONTRACT);
             
-            const tokenAddress = tokenSymbol === "USDC" ? DEPLOYED_CONTRACTS.USDC_TOKEN : DEPLOYED_CONTRACTS.EURC_TOKEN;
+            const tokenAddress = getSafeAddress(tokenSymbol === "USDC" ? RAW_CONTRACTS.USDC_TOKEN : RAW_CONTRACTS.EURC_TOKEN);
             const targetChainId = targetChain === "Sepolia" ? 11155111 : 84532;
 
             try {
@@ -552,7 +562,7 @@
 
                 let tx = await token.approve(targetBridge, ethers.parseUnits(amount, 6));
                 await tx.wait();
-                tx = await bridge.bridgeAsset(targetChainId, tokenAddress, ethers.parseUnits(amount, 6), recipient, { value: ethers.parseEther("0.001") });
+                tx = await bridge.bridgeAsset(targetChainId, tokenAddress, ethers.parseUnits(amount, 6), getSafeAddress(recipient), { value: ethers.parseEther("0.001") });
                 await tx.wait();
                 alert("Bridge thành công!");
                 await triggerMultiBalanceRefresh();
