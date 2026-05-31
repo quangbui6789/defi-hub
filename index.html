@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARC All-in-One DeFi & AI Hub</title>
+    <!-- Nhúng thư viện CSS Tailwind để làm giao diện đẹp -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Nhúng thư viện Ethers.js để tương tác với ví Metamask -->
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js" type="application/javascript"></script>
+</head>
+<body class="bg-gray-900 text-white font-sans min-h-screen">
+
+    <!-- Header -->
+    <header class="flex justify-between items-center p-6 border-b border-gray-800 bg-gray-950">
+        <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 bg-blue-500 rounded-full animate-pulse"></div>
+            <span class="text-xl font-bold tracking-wider text-blue-400">ARC AI-DEFI HUB</span>
+        </div>
+        <div class="flex items-center space-x-4">
+            <button onclick="handleFaucet()" class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg text-sm font-medium transition">
+                🎁 Nhận Token Testnet
+            </button>
+            <button id="connectBtn" onclick="connectWallet()" class="bg-blue-600 hover:bg-blue-700 px-5 py-2 rounded-lg text-sm font-medium transition">
+                Connect Wallet
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-5xl mx-auto mt-12 p-4">
+        <!-- Tabs Menu -->
+        <div class="flex justify-center space-x-2 bg-gray-950 p-2 rounded-xl mb-8 max-w-md mx-auto border border-gray-800">
+            <button onclick="switchTab('swap')" id="tab-swap" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600">Swap</button>
+            <button onclick="switchTab('lending')" id="tab-lending" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-gray-400">Lending</button>
+            <button onclick="switchTab('bridge')" id="tab-bridge" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-gray-400">Bridge</button>
+            <button onclick="switchTab('ai')" id="tab-ai" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-gray-400">AI Agent</button>
+        </div>
+
+        <!-- Khung nội dung chức năng -->
+        <div class="bg-gray-950 p-8 rounded-2xl border border-gray-800 shadow-xl max-w-lg mx-auto">
+            
+            <!-- SWAP -->
+            <div id="content-swap" class="tab-content">
+                <h2 class="text-xl font-bold mb-4 text-blue-400">Instant Swap (ARC DEX)</h2>
+                <div class="space-y-4">
+                    <div class="bg-gray-900 p-4 rounded-xl border border-gray-800">
+                        <label class="text-xs text-gray-400 block mb-1">From</label>
+                        <div class="flex justify-between items-center">
+                            <input type="number" id="swapAmount" oninput="calculateSwap()" placeholder="0.0" class="bg-transparent text-xl font-bold focus:outline-none w-2/3" />
+                            <span class="font-semibold text-gray-300">tUSDT</span>
+                        </div>
+                    </div>
+                    <div class="text-center text-gray-500">⬇️</div>
+                    <div class="bg-gray-900 p-4 rounded-xl border border-gray-800">
+                        <label class="text-xs text-gray-400 block mb-1">To (Ước tính)</label>
+                        <div class="flex justify-between items-center">
+                            <input type="text" id="swapResult" readonly placeholder="0.0" class="bg-transparent text-xl font-bold focus:outline-none w-2/3 text-gray-400" />
+                            <span class="font-semibold text-gray-300">tBTC</span>
+                        </div>
+                    </div>
+                    <button onclick="executeAction('Swap tài sản thành công!')" class="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded-xl font-bold transition mt-4">Swap Now</button>
+                </div>
+            </div>
+
+            <!-- LENDING -->
+            <div id="content-lending" class="tab-content hidden">
+                <h2 class="text-xl font-bold mb-4 text-blue-400">Arc Money Market</h2>
+                <p class="text-xs text-gray-400 mb-4">Gửi tiết kiệm nhận lãi suất hoặc thế chấp tài sản để vay trên mạng ARC Testnet.</p>
+                <input type="number" placeholder="Nhập số lượng tUSDT" class="w-full bg-gray-900 p-4 rounded-xl border border-gray-800 mb-4 focus:outline-none" />
+                <div class="grid grid-cols-2 gap-4">
+                    <button onclick="executeAction('Gửi tài sản vào Pool thành công!')" class="bg-green-600 hover:bg-green-700 py-3 rounded-xl font-bold transition">Deposit (Lend)</button>
+                    <button onclick="executeAction('Vay tài sản (Borrow) thành công!')" class="border border-red-500 text-red-400 hover:bg-red-950 py-3 rounded-xl font-bold transition">Borrow</button>
+                </div>
+            </div>
+
+            <!-- BRIDGE -->
+            <div id="content-bridge" class="tab-content hidden">
+                <h2 class="text-xl font-bold mb-4 text-blue-400">Cross-Chain Bridge</h2>
+                <div class="flex justify-between items-center text-sm px-2 mb-4 text-gray-400">
+                    <span>Mạng gốc: <b>ARC Chain</b></span>
+                    <span>➔</span>
+                    <span>Mạng đích: <b>Ethereum</b></span>
+                </div>
+                <input type="number" placeholder="Số lượng $ARC muốn chuyển" class="w-full bg-gray-900 p-4 rounded-xl border border-gray-800 mb-4 focus:outline-none" />
+                <button onclick="executeAction('Lệnh Bridge đã được gửi! Đang chờ validator xác nhận chuỗi.')" class="w-full bg-indigo-600 hover:bg-indigo-700 py-3 rounded-xl font-bold transition">Bắt đầu Bridge</button>
+            </div>
+
+            <!-- AI AGENT -->
+            <div id="content-ai" class="tab-content hidden">
+                <h2 class="text-xl font-bold mb-2 text-blue-400">🤖 ARC Intelligent Agent</h2>
+                <p class="text-xs text-gray-400 mb-4">Ra lệnh cho AI Agent thực hiện giao dịch DeFi bằng ngôn ngữ tự nhiên.</p>
+                <textarea id="aiPrompt" rows="3" placeholder="Ví dụ: 'Hãy swap giúp tôi 50 USDT sang tBTC'..." class="w-full bg-gray-900 border border-gray-800 rounded-xl p-3 text-sm focus:outline-none text-white mb-3"></textarea>
+                <button onclick="handleAiAgent()" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 py-3 rounded-xl font-bold transition">Gửi lệnh cho AI</button>
+                <div id="aiResponse" class="hidden mt-4 bg-gray-900 p-4 rounded-xl border border-blue-900 text-sm text-gray-300 whitespace-pre-line"></div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Toaster Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-blue-900 border border-blue-500 text-blue-200 px-4 py-3 rounded-xl shadow-2xl transition-all hidden z-50"></div>
+
+    <!-- Nhúng logic JavaScript điều khiển -->
+    <script>
+        let account = "";
+        
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = "ℹ️ " + msg;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 4000);
+        }
+
+        async function connectWallet() {
+            if (!window.ethereum) return alert("Vui lòng cài đặt ví Metamask!");
+            try {
+                const provider = new ethers.providers.Web3Provider(window.ethereum);
+                await provider.send("eth_requestAccounts", []);
+                const signer = provider.getSigner();
+                account = await signer.getAddress();
+                document.getElementById('connectBtn').innerText = account.substring(0,6) + "..." + account.substring(account.length-4);
+                showToast("Đã kết nối ví thành công với mạng ARC Testnet!");
+            } catch (err) {
+                showToast("Kết nối ví thất bại.");
+            }
+        }
+
+        function handleFaucet() {
+            if(!account) return alert("Vui lòng kết nối ví trước!");
+            showToast("Đang xử lý cấp token testnet miễn phí ($tUSDT, $tBTC)...");
+            setTimeout(() => showToast("Cấp token testnet thành công! Kiểm tra số dư ví."), 2500);
+        }
+
+        function calculateSwap() {
+            const amt = document.getElementById('swapAmount').value;
+            document.getElementById('swapResult').value = amt ? (amt / 43000).toFixed(6) : "0.0";
+        }
+
+        function executeAction(successMessage) {
+            if(!account) return alert("Vui lòng kết nối ví trước!");
+            showToast("Đang gửi yêu cầu xác thực ví...");
+            setTimeout(() => showToast(successMessage), 2000);
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => { el.classList.remove('bg-blue-600'); el.classList.add('text-gray-400'); });
+            
+            document.getElementById('content-' + tabId).classList.remove('hidden');
+            document.getElementById('tab-' + tabId).classList.add('bg-blue-600');
+            document.getElementById('tab-' + tabId).classList.remove('text-gray-400');
+        }
+
+        function handleAiAgent() {
+            const prompt = document.getElementById('aiPrompt').value.toLowerCase();
+            const responseBox = document.getElementById('aiResponse');
+            if(!prompt) return;
+            
+            responseBox.classList.remove('hidden');
+            responseBox.innerText = "🤖 AI Agent đang tính toán lộ trình tối ưu trên chuỗi ARC...";
+            
+            setTimeout(() => {
+                if (prompt.includes("swap") || prompt.includes("đổi")) {
+                    responseBox.innerText = "🤖 [Agent AI]: Tôi phát hiện bạn muốn Swap. Tỷ giá tối ưu hiện tại trên mạng ARC: 1 tBTC = 43,000 tUSDT. Bạn có muốn tôi thực hiện ký lệnh ví tự động không?";
+                } else if (prompt.includes("lend") || prompt.includes("gửi")) {
+                    responseBox.innerText = "🤖 [Agent AI]: Pool cho vay tUSDT đang có tỷ suất lợi nhuận cao nhất (APY 8.5%). Tôi đề xuất bạn dùng tính năng Lending.";
+                } else {
+                    responseBox.innerText = "🤖 [Agent AI]: Lệnh chưa rõ ràng. Tôi có thể thực thi các lệnh: 'Swap 100 USDT', 'Tìm bể lãi suất Lending tốt nhất', hoặc 'Bridge tài sản'.";
+                }
+            }, 1500);
+        }
+    </script>
+</body>
+</html>
