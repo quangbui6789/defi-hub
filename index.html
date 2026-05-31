@@ -177,7 +177,7 @@
         <div id="swap-tab" class="tab-content active">
             <div class="input-group">
                 <label>Từ Token</label>
-                <select id="swapFromToken" onchange="updateAllBalances()">
+                <select id="swapFromToken" onchange="handleSwapFromChange()">
                     <option value="USDC">USDC</option>
                     <option value="EURC">EURC</option>
                 </select>
@@ -191,7 +191,7 @@
             </div>
             <div class="input-group">
                 <label>Đến Token</label>
-                <select id="swapToToken">
+                <select id="swapToToken" onchange="handleSwapToChange()">
                     <option value="EURC">EURC</option>
                     <option value="USDC">USDC</option>
                 </select>
@@ -290,13 +290,13 @@
     </div>
 
     <script>
+        // SỬA ĐỔI QUAN TRỌNG: Đã chuyển toàn bộ các contract sang định dạng chuẩn Checksum Address để tương thích Ethers v6
         const DEPLOYED_CONTRACTS = {
             USDC_TOKEN: "0x3600000000000000000000000000000000000000", 
             EURC_TOKEN: "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a", 
-            
-            SWAP_POOL_ROUTER: "0x6e668380dfd601362de6916b3d66bb11cee0294e", 
-            LENDING_POOL: "0x980f1a6a5b92c7f723ac2169e2ebf73b88b8cbe0",
-            BRIDGE_CONTRACT: "0xd10904f6d8a29397686b24d776472481f4b41ebf"
+            SWAP_POOL_ROUTER: "0x6E668380DFd601362dE6916b3D66bb11cee0294e", 
+            LENDING_POOL: "0x980F1A6A5b92C7f723Ac2169E2eBF73B88b8CBe0",
+            BRIDGE_CONTRACT: "0xd10904f6D8a29397686B24d776472481f4b41Ebf"
         };
 
         const ERC20_ABI = [
@@ -306,7 +306,7 @@
 
         const SWAP_POOL_ABI = [
             "function swap(address fromToken, address toToken, uint256 amountIn) external",
-            "function addLiquidity(uint256 amountUSDC, uint256 amountEURC) external returns (uint256 liquidity)"
+            "function addLiquidity(uint226 amountUSDC, uint256 amountEURC) external returns (uint256 liquidity)"
         ];
 
         const LENDING_POOL_ABI = [
@@ -330,6 +330,18 @@
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
             e.currentTarget.classList.add('active');
+        }
+
+        async function handleSwapFromChange() {
+            const fromToken = document.getElementById('swapFromToken').value;
+            document.getElementById('swapToToken').value = fromToken === "USDC" ? "EURC" : "USDC";
+            await updateAllBalances();
+        }
+
+        async function handleSwapToChange() {
+            const toToken = document.getElementById('swapToToken').value;
+            document.getElementById('swapFromToken').value = toToken === "USDC" ? "EURC" : "USDC";
+            await updateAllBalances();
         }
 
         async function getTokenBalance(tokenAddress, account) {
@@ -377,13 +389,12 @@
             }
         }
 
-        // ĐÊM NGƯỢC CẬP NHẬT TRỄ: Hàm hỗ trợ quét lại số dư nhiều lần liên tục sau giao dịch thành công để tránh delay của Node RPC
         async function triggerMultiBalanceRefresh() {
             const delays = [1000, 2500, 4000]; 
             for (const delay of delays) {
                 await new Promise(resolve => setTimeout(resolve, delay));
                 await updateAllBalances();
-                console.log(`[RPC Sync] Đã cập nhật lại số dư tự động sau ${delay}ms`);
+                console.log(`[RPC Sync] Đồng bộ số dư thành công sau ${delay}ms`);
             }
         }
 
@@ -441,13 +452,12 @@
                     gasLimit: 300000 
                 });
                 
-                updateLog("Giao dịch đang được xử lý khai thác block: " + tx.hash);
+                updateLog("Giao dịch đang được đóng block: " + tx.hash);
                 await tx.wait();
 
-                updateLog(`Giao dịch thành công! Hệ thống đang kích hoạt quét đồng bộ số dư...`);
+                updateLog(`Giao dịch thành công! Đang kích hoạt quét đồng bộ số dư...`);
                 alert("Hoán đổi thành công!");
                 
-                // Kích hoạt chu kỳ quét đa tầng để hiển thị số dư đã trừ chính xác nhất
                 await triggerMultiBalanceRefresh();
             } catch (err) {
                 console.error(err);
