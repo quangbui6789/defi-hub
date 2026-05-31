@@ -174,7 +174,6 @@
     </div>
 
     <div class="container">
-        <!-- 1. TAB SWAP -->
         <div id="swap-tab" class="tab-content active">
             <div class="input-group">
                 <label>Từ Token</label>
@@ -200,7 +199,6 @@
             <button class="btn-action" onclick="uiSwap()">Xác Nhận Swap</button>
         </div>
 
-        <!-- 2. TAB LIQUIDITY -->
         <div id="liquidity-tab" class="tab-content">
             <h3>Liquidity Pool</h3>
             <div class="input-group">
@@ -220,7 +218,6 @@
             <button class="btn-action" onclick="uiAddLiquidity()">Thêm Thanh Khoản</button>
         </div>
 
-        <!-- 3. TAB LENDING -->
         <div id="lending-tab" class="tab-content">
             <h3>Lending Pool</h3>
             <div class="input-group">
@@ -240,7 +237,6 @@
             <button class="btn-action" onclick="uiLending()">Xác Nhận Lending</button>
         </div>
 
-        <!-- 4. TAB BORROW -->
         <div id="borrow-tab" class="tab-content">
             <h3>Borrow (Vay)</h3>
             <div class="input-group">
@@ -260,7 +256,6 @@
             <button class="btn-action" onclick="uiBorrow()">Xác Nhận Vay</button>
         </div>
 
-        <!-- 5. TAB BRIDGE -->
         <div id="bridge-tab" class="tab-content">
             <h3>Cross-Chain Bridge</h3>
             <div class="input-group">
@@ -295,7 +290,6 @@
     </div>
 
     <script>
-        // Chuyển toàn bộ địa chỉ thành lowercase gốc để không bị sai lệch chuẩn hóa thủ công
         const RAW_CONTRACTS = {
             USDC_TOKEN: "0x3600000000000000000000000000000000000000", 
             EURC_TOKEN: "0x89b50855aa3be2f677cd6303cec089b5f319d72a", 
@@ -304,7 +298,6 @@
             BRIDGE_CONTRACT: "0xd10904f6d8a29397686b24d776472481f4b41ebf"
         };
 
-        // Hàm helper tự động ép Ethers v6 lấy Checksum Address an toàn 100%
         function getSafeAddress(addr) {
             return ethers.getAddress(addr.toLowerCase());
         }
@@ -359,7 +352,6 @@
             try {
                 if(!window.ethereum || !account) return "0.0000";
                 const provider = new ethers.BrowserProvider(window.ethereum);
-                // Áp dụng bọc Checksum an toàn tại đây
                 const contract = new ethers.Contract(getSafeAddress(tokenAddress), ERC20_ABI, provider);
                 const balance = await contract.balanceOf(getSafeAddress(account));
                 return ethers.formatUnits(balance, 6);
@@ -401,8 +393,9 @@
             }
         }
 
+        // Tối ưu hóa chu kỳ quét: tăng số lần quét và kéo giãn thời gian để đồng bộ chuẩn xác với block on-chain
         async function triggerMultiBalanceRefresh() {
-            const delays = [1000, 2500, 4000]; 
+            const delays = [1500, 3000, 4500, 6000]; 
             for (const delay of delays) {
                 await new Promise(resolve => setTimeout(resolve, delay));
                 await updateAllBalances();
@@ -437,7 +430,6 @@
             const toSymbol = document.getElementById('swapToToken').value;
             const amountIn = document.getElementById('swapAmountIn').value;
             
-            // Tự động giải quyết Checksum an toàn khi chuyển đổi
             const targetRouter = getSafeAddress(RAW_CONTRACTS.SWAP_POOL_ROUTER);
 
             if (fromSymbol === toSymbol) return alert("Token nguồn và đích phải khác nhau!");
@@ -470,6 +462,8 @@
                 updateLog(`Giao dịch thành công! Đang kích hoạt quét đồng bộ số dư...`);
                 alert("Hoán đổi thành công!");
                 
+                // Đồng bộ lại số dư ngay lập tức và chạy chu kỳ quét ngầm
+                await updateAllBalances();
                 await triggerMultiBalanceRefresh();
             } catch (err) {
                 console.error(err);
@@ -499,6 +493,7 @@
                 tx = await swapPool.addLiquidity(ethers.parseUnits(amountUSDC, 6), ethers.parseUnits(amountEURC, 6));
                 await tx.wait();
                 alert("Nạp thanh khoản thành công!");
+                await updateAllBalances();
                 await triggerMultiBalanceRefresh();
             } catch (err) { alert(err.message); }
         }
@@ -521,6 +516,7 @@
                 tx = await lending.deposit(tokenAddress, ethers.parseUnits(amount, 6));
                 await tx.wait();
                 alert("Lending thành công!");
+                await updateAllBalances();
                 await triggerMultiBalanceRefresh();
             } catch (err) { alert(err.message); }
         }
@@ -539,6 +535,7 @@
                 let tx = await lending.borrow(tokenAddress, ethers.parseUnits(amount, 6));
                 await tx.wait();
                 alert("Vay thành công!");
+                await updateAllBalances();
                 await triggerMultiBalanceRefresh();
             } catch (err) { alert(err.message); }
         }
@@ -565,6 +562,7 @@
                 tx = await bridge.bridgeAsset(targetChainId, tokenAddress, ethers.parseUnits(amount, 6), getSafeAddress(recipient), { value: ethers.parseEther("0.001") });
                 await tx.wait();
                 alert("Bridge thành công!");
+                await updateAllBalances();
                 await triggerMultiBalanceRefresh();
             } catch (err) { alert(err.message); }
         }
