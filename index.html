@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ARC AI-DEFI HUB (REAL ON-CHAIN)</title>
-    <!-- Nhúng thư viện Ethers.js v6 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.11.1/ethers.umd.min.js"></script>
     <style>
         :root {
@@ -166,7 +165,6 @@
         </div>
     </div>
 
-    <!-- Điều hướng ứng dụng -->
     <div class="nav-tabs">
         <button class="tab-btn active" onclick="switchTab(event, 'swap-tab')">Swap</button>
         <button class="tab-btn" onclick="switchTab(event, 'liquidity-tab')">Liquidity</button>
@@ -176,7 +174,6 @@
     </div>
 
     <div class="container">
-        <!-- 1. TAB SWAP -->
         <div id="swap-tab" class="tab-content active">
             <div class="input-group">
                 <label>Từ Token</label>
@@ -202,7 +199,6 @@
             <button class="btn-action" onclick="uiSwap()">Xác Nhận Swap</button>
         </div>
 
-        <!-- 2. TAB LIQUIDITY -->
         <div id="liquidity-tab" class="tab-content">
             <h3>Liquidity Pool</h3>
             <div class="input-group">
@@ -222,7 +218,6 @@
             <button class="btn-action" onclick="uiAddLiquidity()">Thêm Thanh Khoản</button>
         </div>
 
-        <!-- 3. TAB LENDING -->
         <div id="lending-tab" class="tab-content">
             <h3>Lending Pool</h3>
             <div class="input-group">
@@ -242,7 +237,6 @@
             <button class="btn-action" onclick="uiLending()">Xác Nhận Lending</button>
         </div>
 
-        <!-- 4. TAB BORROW -->
         <div id="borrow-tab" class="tab-content">
             <h3>Borrow (Vay)</h3>
             <div class="input-group">
@@ -262,7 +256,6 @@
             <button class="btn-action" onclick="uiBorrow()">Xác Nhận Vay</button>
         </div>
 
-        <!-- 5. TAB BRIDGE -->
         <div id="bridge-tab" class="tab-content">
             <h3>Cross-Chain Bridge</h3>
             <div class="input-group">
@@ -298,16 +291,15 @@
 
     <script>
         // =========================================================================
-        // ĐÃ ĐIỀN ĐỦ CẢ TOKEN VÀ CONTRACT HỆ THỐNG CỦA MẠNG ARC TESTNET
+        // ĐÃ SỬA LỖI CHECKSUM - ĐƯA TẤT CẢ ĐỊA CHỈ VỀ LOWERCASE TOÀN BỘ
         // =========================================================================
         const DEPLOYED_CONTRACTS = {
-            USDC_TOKEN: "0x3600000000000000000000000000000000000000", // Native wrapper
-            EURC_TOKEN: "0x89B50B55Aa3bE2F677cD6303Cec089B5F319D72a", // Real Contract
+            USDC_TOKEN: "0x3600000000000000000000000000000000000000", 
+            EURC_TOKEN: "0x89b50b55aa3be2f677cd6303cec089b5f319d72a", 
             
-            // Đã cập nhật chính xác các địa chỉ hệ thống
-            SWAP_POOL_ROUTER: "0x6E668380DFd601362DE6916B3D66bB11Cee0294e", 
-            LENDING_POOL: "0x980F1a6A5b92C7F723Ac2169E2Ebf73b88B8CBe0",
-            BRIDGE_CONTRACT: "0xD10904f6D8A29397686b24d776472481F4B41EBF"
+            SWAP_POOL_ROUTER: "0x6e668380dfd601362de6916b3d66bb11cee0294e", 
+            LENDING_POOL: "0x980f1a6a5b92c7f723ac2169e2ebf73b88b8cbe0",
+            BRIDGE_CONTRACT: "0xd10904f6d8a29397686b24d776472481f4b41ebf"
         };
 
         const ERC20_ABI = [
@@ -404,9 +396,6 @@
             updateLog("Đã ngắt kết nối ví.");
         }
 
-        // =========================================================================
-        // TIẾN TRÌNH SWAP LIỀN MẠCH (CHẠY THẲNG LỆNH SWAP NGAY SAU APPROVE)
-        // =========================================================================
         async function uiSwap() {
             if (!userAddress) return alert("Vui lòng kết nối ví trước!");
             const fromSymbol = document.getElementById('swapFromToken').value;
@@ -428,15 +417,13 @@
                 const tokenInContract = new ethers.Contract(fromAddress, ERC20_ABI, signer);
                 const swapContract = new ethers.Contract(targetRouter, SWAP_POOL_ABI, signer);
                 
-                const decimals = await tokenInContract.decimals().catch(() => 6); // Đồng bộ hệ số 6 từ tài liệu
+                const decimals = await tokenInContract.decimals().catch(() => 6);
                 const parsedAmountIn = ethers.parseUnits(amountIn, decimals);
 
-                // Bước 1: Kích hoạt Approve spending cap
                 updateLog(`[1/2] Đang gọi quyền chi tiêu (Approve) ${fromSymbol}...`);
                 let approveTx = await tokenInContract.approve(targetRouter, parsedAmountIn);
                 await approveTx.wait();
                 
-                // Bước 2: Thực hiện hoán đổi ngay lập tức
                 updateLog(`[2/2] Approve thành công! Đang tiến hành Hoán đổi (Swap) thực tế...`);
                 let tx = await swapContract.swap(fromAddress, toAddress, parsedAmountIn, {
                     gasLimit: 300000 
