@@ -3,268 +3,414 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arc DEX DeFi Hub - Real On-Chain</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+    <title>ARC AI-DEFI HUB (REAL ON-CHAIN)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.11.1/ethers.umd.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0b111e;
+            --card-bg: #111827;
+            --primary-color: #1d4ed8;
+            --primary-hover: #2563eb;
+            --text-color: #ffffff;
+            --text-muted: #9ca3af;
+            --success: #10b981;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            border-bottom: 1px solid #1f2937;
+        }
+        .logo {
+            font-size: 20px;
+            font-weight: bold;
+            color: #3b82f6;
+        }
+        .btn-connect {
+            background-color: var(--success);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .nav-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 30px 0;
+        }
+        .tab-btn {
+            background-color: #1f2937;
+            color: var(--text-muted);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .tab-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background-color: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #374151;
+            background-color: #1f2937;
+            color: white;
+            box-sizing: border-box;
+        }
+        .btn-action {
+            width: 100%;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .btn-action:hover {
+            background-color: var(--primary-hover);
+        }
+        .status-box {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 6px;
+            background-color: #1f2937;
+            font-size: 13px;
+            word-break: break-all;
+        }
+    </style>
 </head>
-<body class="bg-gray-900 text-white font-sans min-h-screen">
+<body>
 
-    <header class="flex justify-between items-center p-6 border-b border-gray-800 bg-gray-950">
-        <div class="flex items-center space-x-3">
-            <div class="w-8 h-8 bg-blue-500 rounded-full animate-pulse"></div>
-            <span class="text-xl font-bold tracking-wider text-blue-400">ARC AI-DEFI HUB (REAL ON-CHAIN)</span>
-        </div>
-        <div class="flex items-center space-x-4">
-            <button onclick="handleFaucet()" class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg text-sm font-medium transition cursor-pointer">
-                🎁 Faucet USDC / EURC
-            </button>
-            <button id="connectBtn" onclick="connectWallet()" class="bg-blue-600 hover:bg-blue-700 px-5 py-2 rounded-lg text-sm font-medium transition cursor-pointer">
-                Connect Wallet
-            </button>
-        </div>
-    </header>
+    <div class="header">
+        <div class="logo">ARC AI-DEFI HUB (REAL ON-CHAIN)</div>
+        <button class="btn-connect" id="connectBtn" onclick="connectWallet()">Connect Wallet</button>
+    </div>
 
-    <main class="max-w-5xl mx-auto mt-12 p-4">
-        <div class="flex justify-center space-x-1 bg-gray-950 p-2 rounded-xl mb-8 max-w-lg mx-auto border border-gray-800 overflow-x-auto">
-            <button onclick="switchTab('swap')" id="tab-swap" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 whitespace-nowrap cursor-pointer">Swap</button>
-            <button onclick="switchTab('lending')" id="tab-lending" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-gray-400 whitespace-nowrap cursor-pointer">Lending</button>
-            <button onclick="switchTab('borrow')" id="tab-borrow" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-gray-400 whitespace-nowrap cursor-pointer">Borrow</button>
-            <button onclick="switchTab('bridge')" id="tab-bridge" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-gray-400 whitespace-nowrap cursor-pointer">Bridge</button>
-            <button onclick="switchTab('ai')" id="tab-ai" class="tab-btn px-4 py-2 rounded-lg text-sm font-semibold text-gray-400 whitespace-nowrap cursor-pointer">AI Agent</button>
-        </div>
+    <div class="nav-tabs">
+        <button class="tab-btn active" onclick="switchTab('swap-tab')">Swap & Liquidity</button>
+        <button class="tab-btn" onclick="switchTab('lending-tab')">Lending</button>
+        <button class="tab-btn" onclick="switchTab('borrow-tab')">Borrow</button>
+        <button class="tab-btn" onclick="switchTab('bridge-tab')">Bridge</button>
+    </div>
 
-        <div class="bg-gray-950 p-8 rounded-2xl border border-gray-800 shadow-xl max-w-lg mx-auto">
-            
-            <div id="content-swap" class="tab-content">
-                <h2 class="text-xl font-bold mb-4 text-blue-400">Instant Swap (Arc Real Transaction)</h2>
-                <div class="space-y-4">
-                    <div class="bg-gray-900 p-4 rounded-xl border border-gray-800">
-                        <div class="flex justify-between items-center mb-1">
-                            <label class="text-xs text-gray-400 block">From</label>
-                            <span id="fromBalance" class="text-xs text-gray-500">Số dư: Đang tải...</span>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <input type="number" id="swapAmount" oninput="calculateSwap()" placeholder="0.0" value="0.001" step="0.001" class="bg-transparent text-xl font-bold focus:outline-none w-2/3" />
-                            <span class="font-semibold text-blue-400">USDC</span>
-                        </div>
-                    </div>
-                    <div class="text-center text-gray-500">⬇️</div>
-                    <div class="bg-gray-900 p-4 rounded-xl border border-gray-800">
-                        <label class="text-xs text-gray-400 block mb-1">To (Ước tính)</label>
-                        <div class="flex justify-between items-center">
-                            <input type="text" id="swapResult" readonly value="0.0009" placeholder="0.0" class="bg-transparent text-xl font-bold focus:outline-none w-2/3 text-gray-400" />
-                            <span class="font-semibold text-green-400">EURC</span>
-                        </div>
-                    </div>
-                    <button onclick="executeRealOnChainTx()" class="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded-xl font-bold transition mt-4 cursor-pointer">Swap Now </button>
-                </div>
+    <div class="container">
+        <div id="swap-tab" class="tab-content active">
+            <h3>Tạo Pool & Thêm Thanh Khoản</h3>
+            <div class="input-group">
+                <label>Số lượng USDC nạp vào Pool</label>
+                <input type="number" id="swapUsdcAmount" placeholder="0.0">
             </div>
-
-            <div id="content-lending" class="tab-content hidden p-4 text-center text-gray-400">Chức năng Lending thực tế yêu cầu địa chỉ Smart Contract Pool cụ thể.</div>
-            <div id="content-borrow" class="tab-content hidden p-4 text-center text-gray-400">Chức năng Borrow thực tế yêu cầu địa chỉ Credit Smart Contract.</div>
-            <div id="content-bridge" class="tab-content hidden p-4 text-center text-gray-400">Chức năng Bridge thực tế cần kết nối với Smart Contract Bridge Gateway.</div>
-            <div id="content-ai" class="tab-content hidden p-4 text-center text-gray-400">AI Agent thực tế sẽ nhận lệnh ký mã hóa này để thay mặt bạn gửi lệnh đi.</div>
-
-            <div id="txStatusBox" class="hidden mt-4 p-3 bg-gray-900 rounded-xl border border-gray-800 text-xs space-y-2">
-                <div class="flex justify-between">
-                    <span class="text-gray-400">Trạng thái:</span>
-                    <span id="txStatusText" class="text-yellow-500 font-medium">Đang chờ...</span>
-                </div>
-                <div class="flex justify-between overflow-hidden">
-                    <span class="text-gray-400 min-w-[70px]">Tx Hash:</span>
-                    <a id="txHashLink" href="#" target="_blank" class="text-blue-400 underline truncate hover:text-blue-300">Chưa có</a>
-                </div>
+            <div class="input-group">
+                <label>Số lượng EURC nạp vào Pool</label>
+                <input type="number" id="swapEurcAmount" placeholder="0.0">
             </div>
-
+            <button class="btn-action" onclick="uiAddLiquidity()">Thêm Thanh Khoản (Create/Add Pool)</button>
         </div>
-    </main>
 
-    <div id="toast" class="fixed bottom-5 right-5 bg-blue-900 border border-blue-500 text-blue-200 px-4 py-3 rounded-xl shadow-2xl transition-all hidden z-50"></div>
+        <div id="lending-tab" class="tab-content">
+            <h3>Lending Pool (Gửi Tài Sản)</h3>
+            <div class="input-group">
+                <label>Chọn tài sản muốn Lending</label>
+                <select id="lendingToken">
+                    <option value="USDC">USDC</option>
+                    <option value="EURC">EURC</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Số lượng muốn gửi</label>
+                <input type="number" id="lendingAmount" placeholder="0.0">
+            </div>
+            <button class="btn-action" onclick="uiLending()">Xác Nhận Lending</button>
+        </div>
+
+        <div id="borrow-tab" class="tab-content">
+            <h3>Borrow (Vay Tài Sản)</h3>
+            <div class="input-group">
+                <label>Chọn tài sản muốn vay</label>
+                <select id="borrowToken">
+                    <option value="USDC">USDC</option>
+                    <option value="EURC">EURC</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Số lượng muốn vay</label>
+                <input type="number" id="borrowAmount" placeholder="0.0">
+            </div>
+            <button class="btn-action" onclick="uiBorrow()">Xác Nhận Vay</button>
+        </div>
+
+        <div id="bridge-tab" class="tab-content">
+            <h3>Cross-Chain Bridge (Từ Arc Chain)</h3>
+            <div class="input-group">
+                <label>Chuỗi đích chuyển đến</label>
+                <select id="bridgeTargetChain">
+                    <option value="Sepolia">Sepolia Testnet</option>
+                    <option value="Base">Base Mainnet/Testnet</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Chọn Token muốn cầu</label>
+                <select id="bridgeToken">
+                    <option value="USDC">USDC</option>
+                    <option value="EURC">EURC</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Số lượng gửi qua cầu</label>
+                <input type="number" id="bridgeAmount" placeholder="0.0">
+            </div>
+            <div class="input-group">
+                <label>Địa chỉ ví nhận ở Chain đích</label>
+                <input type="text" id="bridgeRecipient" placeholder="0x...">
+            </div>
+            <button class="btn-action" onclick="uiBridge()">Kích Hoạt Cầu Nối</button>
+        </div>
+
+        <div class="status-box" id="statusConsole">Trạng thái hệ thống: Sẵn sàng kết nối ví.</div>
+    </div>
 
     <script>
-        let account = "";
-        let provider;
-
-        // CẤU HÌNH CHUẨN XÁC TỪ ARCSCAN TESTNET
-        const ARC_TESTNET_PARAMS = {
-            chainId: "0x4cef52", // Thập phân: 5042002
-            chainName: "Arc Testnet",
-            rpcUrls: ["https://rpc.testnet.arc.network"],
-            nativeCurrency: {
-                name: "USD Coin",
-                symbol: "USDC",
-                decimals: 6
-            },
-            blockExplorerUrls: ["https://testnet.arcscan.app"]
+        // Cấu hình các địa chỉ Smart Contract thực tế của bạn trên Arc Chain tại đây
+        const DEPLOYED_CONTRACTS = {
+            USDC_TOKEN: "0x0000000000000000000000000000000000000001", 
+            EURC_TOKEN: "0x0000000000000000000000000000000000000002", 
+            SWAP_POOL: "0x0000000000000000000000000000000000000003",  
+            LENDING_POOL: "0x0000000000000000000000000000000000000004", 
+            BRIDGE_CONTRACT: "0x0000000000000000000000000000000000000005" 
         };
 
-        function showToast(msg) {
-            const toast = document.getElementById('toast');
-            toast.innerText = "ℹ️ " + msg;
-            toast.classList.remove('hidden');
-            setTimeout(() => toast.classList.add('hidden'), 4000);
+        // Các cấu trúc ABI tối giản tương tác trực tiếp qua Ethers
+        const ERC20_ABI = [
+            "function approve(address spender, uint256 amount) public returns (bool)",
+            "function balanceOf(address account) public view returns (uint256)"
+        ];
+
+        const SWAP_POOL_ABI = [
+            "function addLiquidity(uint256 amountUSDC, uint256 amountEURC) external returns (uint256 liquidity)"
+        ];
+
+        const LENDING_POOL_ABI = [
+            "function deposit(address token, uint256 amount) external",
+            "function borrow(address token, uint256 amount) external"
+        ];
+
+        const BRIDGE_ABI = [
+            "function bridgeAsset(uint256 targetChainId, address token, uint256 amount, address recipient) external payable"
+        ];
+
+        let userAddress = null;
+
+        // Hàm log thông báo ra màn hình giao diện công khai
+        function updateLog(msg) {
+            document.getElementById('statusConsole').innerText = "Log: " + msg;
+            console.log(msg);
         }
 
-        async function updateBalance() {
-            if (!account || typeof window.ethereum === 'undefined') return;
-            try {
-                const balanceHex = await window.ethereum.request({
-                    method: 'eth_getBalance',
-                    params: [account, 'latest']
-                });
-                const balanceDecimal = parseInt(balanceHex, 16) / 1000000; 
-                document.getElementById('fromBalance').innerText = `Số dư: ${balanceDecimal.toFixed(4)} USDC`;
-            } catch (err) {
-                console.error("Lỗi lấy số dư:", err);
-            }
-        }
-
-        // ÉP CHUYỂN MẠNG THEO THÔNG SỐ CHUẨN ARCSCAN
-        async function ensureArcNetwork() {
-            if (typeof window.ethereum === 'undefined') return false;
-            try {
-                await window.ethereum.request({
-                    method: 'wallet_switchEthereumChain',
-                    params: [{ chainId: ARC_TESTNET_PARAMS.chainId }],
-                });
-                return true;
-            } catch (switchError) {
-                if (switchError.code === 4902) {
-                    try {
-                        await window.ethereum.request({
-                            method: 'wallet_addEthereumChain',
-                            params: [ARC_TESTNET_PARAMS],
-                        });
-                        return true;
-                    } catch (addError) {
-                        return false;
-                    }
-                }
-                return false;
-            }
-        }
-
-        async function connectWallet() {
-            if (typeof window.ethereum === 'undefined') {
-                alert("Vui lòng cài đặt ví MetaMask!");
-                return false;
-            }
-            try {
-                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                if (accounts.length > 0) {
-                    account = accounts[0];
-                    provider = new ethers.BrowserProvider(window.ethereum);
-                    await ensureArcNetwork();
-                    await updateBalance();
-
-                    const btn = document.getElementById('connectBtn');
-                    btn.innerText = account.substring(0,6) + "..." + account.substring(account.length-4);
-                    btn.className = "bg-green-600 hover:bg-green-700 px-5 py-2 rounded-lg text-sm font-medium transition cursor-pointer";
-                    return true;
-                }
-            } catch (err) {
-                showToast("Kết nối ví thất bại.");
-                return false;
-            }
-        }
-
-        // HÀM GỬI LỆNH TRỰC TIẾP QUA METAMASK ĐỂ KHÔNG BỊ CHẶN CHAIN ID
-        async function executeRealOnChainTx() {
-            if (!account) {
-                const isConnected = await connectWallet();
-                if (!isConnected) return;
-            }
-
-            try {
-                // Đảm bảo ví đang chọn đúng mạng trước khi bắn lệnh
-                await ensureArcNetwork();
-
-                const amountInput = document.getElementById('swapAmount').value;
-                if (!amountInput || amountInput <= 0) {
-                    alert("Vui lòng nhập số lượng hợp lệ!");
-                    return;
-                }
-
-                const statusBox = document.getElementById('txStatusBox');
-                const statusText = document.getElementById('txStatusText');
-                const hashLink = document.getElementById('txHashLink');
-                
-                statusBox.classList.remove('hidden');
-                statusText.innerText = "Đang khởi tạo giao dịch ví...";
-                statusText.className = "text-yellow-500 font-medium";
-
-                // Định dạng tiền tệ Hex phù hợp với cấu trúc RPC của ARC
-                const parsedValue = ethers.parseUnits(amountInput, 6);
-                const valueHex = ethers.toBeHex(parsedValue);
-
-                showToast("Vui lòng phê duyệt giao dịch trên cửa sổ MetaMask!");
-
-                // GỬI THẲNG QUA PROVIDER GỐC CỦA METAMASK (FIX TRIỆT ĐỂ LỖI)
-                const txHash = await window.ethereum.request({
-                    method: 'eth_sendTransaction',
-                    params: [{
-                        from: account,
-                        to: account, // Tự chuyển ví của bạn để tạo lệnh biến động số dư thực tế
-                        value: valueHex,
-                        // Bỏ trống trường chainId và gas để ví MetaMask tự nhận diện thông số mạng đang kích hoạt
-                    }],
-                });
-
-                statusText.innerText = "Đang chờ mạng Arc xác thực giao dịch...";
-                statusText.className = "text-blue-400 font-medium";
-                hashLink.innerText = txHash.substring(0,25) + "...";
-                hashLink.href = `https://testnet.arcscan.app/tx/${txHash}`;
-                
-                showToast("Giao dịch đã gửi! Chờ nhận block on-chain...");
-
-                // Đồng bộ cập nhật lại số dư sau khi mạng xử lý xong
-                setTimeout(async () => {
-                    statusText.innerText = "Thành công (Success)";
-                    statusText.className = "text-green-400 font-medium";
-                    showToast("Giao dịch On-chain hoàn tất!");
-                    await updateBalance();
-                }, 4000);
-
-            } catch (error) {
-                console.error("Lỗi thực thi RPC:", error);
-                document.getElementById('txStatusText').innerText = "Thất bại / Hủy lệnh";
-                document.getElementById('txStatusText').className = "text-red-500 font-medium";
-                showToast("Giao dịch không thành công. Hãy chắc chắn ví của bạn có đủ USDC làm phí.");
-            }
-        }
-
-        function calculateSwap() {
-            const amt = document.getElementById('swapAmount').value;
-            document.getElementById('swapResult').value = amt ? (amt * 0.92).toFixed(4) : "0.0";
-        }
-
+        // Logic chuyển đổi giao diện giữa các Tab điều hướng
         function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.tab-btn').forEach(el => { el.classList.remove('bg-blue-600'); el.classList.add('text-gray-400'); });
-            
-            document.getElementById('content-' + tabId).classList.remove('hidden');
-            document.getElementById('tab-' + tabId).classList.add('bg-blue-600');
-            document.getElementById('tab-' + tabId).classList.remove('text-gray-400');
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
         }
 
-        function handleFaucet() {
-            window.open("https://faucet.circle.com", "_blank"); 
-        }
-
-        window.addEventListener('load', async () => {
-            if (typeof window.ethereum !== 'undefined') {
-                const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-                if (accounts.length > 0) {
-                    account = accounts[0];
-                    provider = new ethers.BrowserProvider(window.ethereum);
-                    await updateBalance();
-                    
-                    const btn = document.getElementById('connectBtn');
-                    btn.innerText = account.substring(0,6) + "..." + account.substring(account.length-4);
-                    btn.className = "bg-green-600 hover:bg-green-700 px-5 py-2 rounded-lg text-sm font-medium transition";
-                }
+        // Hàm Kết nối ví Metamask công khai
+        async function connectWallet() {
+            if (!window.ethereum) return alert("Vui lòng cài đặt MetaMask!");
+            try {
+                const provider = new ethers.BrowserProvider(window.ethereum);
+                const accounts = await provider.send("eth_requestAccounts", []);
+                userAddress = accounts[0];
+                document.getElementById('connectBtn').innerText = userAddress.substring(0, 6) + "..." + userAddress.substring(38);
+                updateLog("Đã kết nối ví thành công: " + userAddress);
+            } catch (err) {
+                updateLog("Lỗi kết nối ví: " + err.message);
             }
-        });
+        }
+
+        // --- HÀM 1: THÊM THANH KHOÁN SWAP POOL ---
+        async function uiAddLiquidity() {
+            if (!userAddress) return alert("Vui lòng kết nối ví trước!");
+            const amountUSDC = document.getElementById('swapUsdcAmount').value;
+            const amountEURC = document.getElementById('swapEurcAmount').value;
+            if (!amountUSDC || !amountEURC) return alert("Vui lòng nhập đầy đủ số lượng cả 2 token!");
+
+            try {
+                const provider = new ethers.BrowserProvider(window.ethereum);
+                const signer = await provider.getSigner();
+
+                const usdc = new ethers.Contract(DEPLOYED_CONTRACTS.USDC_TOKEN, ERC20_ABI, signer);
+                const eurc = new ethers.Contract(DEPLOYED_CONTRACTS.EURC_TOKEN, ERC20_ABI, signer);
+                const swapPool = new ethers.Contract(DEPLOYED_CONTRACTS.SWAP_POOL, SWAP_POOL_ABI, signer);
+
+                const parsedUSDC = ethers.parseUnits(amountUSDC, 6); // Token hệ định dạng 6 decimals
+                const parsedEURC = ethers.parseUnits(amountEURC, 6);
+
+                updateLog("Đang chạy Approve giao dịch USDC...");
+                let tx = await usdc.approve(DEPLOYED_CONTRACTS.SWAP_POOL, parsedUSDC);
+                await tx.wait();
+
+                updateLog("Đang chạy Approve giao dịch EURC...");
+                tx = await eurc.approve(DEPLOYED_CONTRACTS.SWAP_POOL, parsedEURC);
+                await tx.wait();
+
+                updateLog("Đang gửi lệnh tạo Pool/Thêm thanh khoản thanh toán...");
+                tx = await swapPool.addLiquidity(parsedUSDC, parsedEURC);
+                updateLog("Tx gửi thành công! Đang chờ confirm: " + tx.hash);
+                await tx.wait();
+
+                updateLog("Thành công! Pool thanh khoản USDC/EURC đã được nạp tiền.");
+                alert("Nạp thanh khoản tạo Pool thành công!");
+            } catch (err) {
+                updateLog("Lỗi Liquidity: " + err.message);
+            }
+        }
+
+        // --- HÀM 2: LENDING ---
+        async function uiLending() {
+            if (!userAddress) return alert("Vui lòng kết nối ví trước!");
+            const tokenSymbol = document.getElementById('lendingToken').value;
+            const amount = document.getElementById('lendingAmount').value;
+            if (!amount) return alert("Vui lòng nhập số lượng!");
+
+            const tokenAddress = tokenSymbol === "USDC" ? DEPLOYED_CONTRACTS.USDC_TOKEN : DEPLOYED_CONTRACTS.EURC_TOKEN;
+
+            try {
+                const provider = new ethers.BrowserProvider(window.ethereum);
+                const signer = await provider.getSigner();
+
+                const token = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
+                const lending = new ethers.Contract(DEPLOYED_CONTRACTS.LENDING_POOL, LENDING_POOL_ABI, signer);
+                const parsedAmount = ethers.parseUnits(amount, 6);
+
+                updateLog(`Đang duyệt chi (Approve) ${tokenSymbol}...`);
+                let tx = await token.approve(DEPLOYED_CONTRACTS.LENDING_POOL, parsedAmount);
+                await tx.wait();
+
+                updateLog(`Đang gửi tài sản vào Lending Pool...`);
+                tx = await lending.deposit(tokenAddress, parsedAmount);
+                updateLog("Đang xử lý Tx Hash: " + tx.hash);
+                await tx.wait();
+
+                updateLog(`Lending thành công ${amount} ${tokenSymbol}!`);
+                alert("Lending thành công tài sản vào Pool!");
+            } catch (err) {
+                updateLog("Lỗi Lending: " + err.message);
+            }
+        }
+
+        // --- HÀM 3: BORROW ---
+        async function uiBorrow() {
+            if (!userAddress) return alert("Vui lòng kết nối ví trước!");
+            const tokenSymbol = document.getElementById('borrowToken').value;
+            const amount = document.getElementById('borrowAmount').value;
+            if (!amount) return alert("Vui lòng nhập số lượng vay!");
+
+            const tokenAddress = tokenSymbol === "USDC" ? DEPLOYED_CONTRACTS.USDC_TOKEN : DEPLOYED_CONTRACTS.EURC_TOKEN;
+
+            try {
+                const provider = new ethers.BrowserProvider(window.ethereum);
+                const signer = await provider.getSigner();
+
+                const lending = new ethers.Contract(DEPLOYED_CONTRACTS.LENDING_POOL, LENDING_POOL_ABI, signer);
+                const parsedAmount = ethers.parseUnits(amount, 6);
+
+                updateLog(`Đang xử lý lệnh yêu cầu vay ${amount} ${tokenSymbol}...`);
+                let tx = await lending.borrow(tokenAddress, parsedAmount);
+                updateLog("Đang xử lý lệnh Tx Hash: " + tx.hash);
+                await tx.wait();
+
+                updateLog(`Mượn thành công tài sản thành công! Check ví.`);
+                alert("Yêu cầu vay đã hoàn tất!");
+            } catch (err) {
+                updateLog("Lỗi Borrow: " + err.message);
+            }
+        }
+
+        // --- HÀM 4: CROSS-CHAIN BRIDGE ---
+        async function uiBridge() {
+            if (!userAddress) return alert("Vui lòng kết nối ví trước!");
+            const targetChain = document.getElementById('bridgeTargetChain').value;
+            const tokenSymbol = document.getElementById('bridgeToken').value;
+            const amount = document.getElementById('bridgeAmount').value;
+            const recipient = document.getElementById('bridgeRecipient').value;
+
+            if (!amount || !recipient) return alert("Vui lòng nhập đủ số lượng và ví nhận chuỗi đích!");
+            const tokenAddress = tokenSymbol === "USDC" ? DEPLOYED_CONTRACTS.USDC_TOKEN : DEPLOYED_CONTRACTS.EURC_TOKEN;
+            
+            // Sepolia ID: 11155111, Base ID: 8453 (Testnet Base: 84532)
+            const targetChainId = targetChain === "Sepolia" ? 11155111 : 84532; 
+
+            try {
+                const provider = new ethers.BrowserProvider(window.ethereum);
+                const signer = await provider.getSigner();
+
+                const token = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
+                const bridge = new ethers.Contract(DEPLOYED_CONTRACTS.BRIDGE_CONTRACT, BRIDGE_ABI, signer);
+                const parsedAmount = ethers.parseUnits(amount, 6);
+
+                updateLog(`Đang Approve tài sản ${tokenSymbol} gửi qua cầu...`);
+                let tx = await token.approve(DEPLOYED_CONTRACTS.BRIDGE_CONTRACT, parsedAmount);
+                await tx.wait();
+
+                updateLog(`Đang kích hoạt khóa tài sản chuyển sang mạng lưới ${targetChain}...`);
+                // Gửi kèm 0.001 native token để trả phí Relayer chạy ngầm (tùy thuộc kiến trúc hợp đồng bridge)
+                tx = await bridge.bridgeAsset(
+                    targetChainId, 
+                    tokenAddress, 
+                    parsedAmount, 
+                    recipient, 
+                    { value: ethers.parseEther("0.001") }
+                );
+                updateLog("Lệnh cầu đã xuất bến thành công! Tx: " + tx.hash);
+                await tx.wait();
+
+                updateLog(`Giao dịch bridge thành công! Vui lòng đợi Validator mở khóa tài sản ở chuỗi đối ứng.`);
+                alert("Đã gửi tài sản qua cầu nối thành công!");
+            } catch (err) {
+                updateLog("Lỗi Bridge: " + err.message);
+            }
+        }
     </script>
 </body>
 </html>
