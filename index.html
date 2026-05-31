@@ -85,19 +85,6 @@
         let account = "";
         let provider;
 
-        // Cấu hình chuẩn Arc Testnet
-        const ARC_TESTNET_PARAMS = {
-            chainId: "0x4cef52", // Số 5042002 dưới dạng Hex
-            chainName: "Arc Testnet",
-            rpcUrls: ["https://rpc.testnet.arc.network"], 
-            nativeCurrency: {
-                name: "USD Coin",
-                symbol: "USDC", 
-                decimals: 6
-            },
-            blockExplorerUrls: ["https://testnet.arcscan.app"]
-        };
-        
         function showToast(msg) {
             const toast = document.getElementById('toast');
             toast.innerText = "ℹ️ " + msg;
@@ -108,39 +95,14 @@
         async function updateBalance() {
             if (!account || typeof window.ethereum === 'undefined') return;
             try {
-                // Lấy số dư native token (Mạng Arc Testnet dùng USDC làm native token thu phí gas)
                 const balanceHex = await window.ethereum.request({
                     method: 'eth_getBalance',
                     params: [account, 'latest']
                 });
-                const balanceDecimal = parseInt(balanceHex, 16) / 1000000; // 6 decimals cho USDC trên ARC
+                const balanceDecimal = parseInt(balanceHex, 16) / 1000000; 
                 document.getElementById('fromBalance').innerText = `Số dư: ${balanceDecimal.toFixed(4)} USDC`;
             } catch (err) {
                 console.error("Lỗi lấy số dư:", err);
-            }
-        }
-
-        async function ensureArcNetwork() {
-            if (typeof window.ethereum === 'undefined') return false;
-            try {
-                await window.ethereum.request({
-                    method: 'wallet_switchEthereumChain',
-                    params: [{ chainId: ARC_TESTNET_PARAMS.chainId }],
-                });
-                return true;
-            } catch (switchError) {
-                if (switchError.code === 4902) {
-                    try {
-                        await window.ethereum.request({
-                            method: 'wallet_addEthereumChain',
-                            params: [ARC_TESTNET_PARAMS],
-                        });
-                        return true;
-                    } catch (addError) {
-                        return false;
-                    }
-                }
-                return false;
             }
         }
 
@@ -154,7 +116,6 @@
                 if (accounts.length > 0) {
                     account = accounts[0];
                     provider = new ethers.BrowserProvider(window.ethereum);
-                    await ensureArcNetwork();
                     await updateBalance();
 
                     const btn = document.getElementById('connectBtn');
@@ -168,7 +129,7 @@
             }
         }
 
-        // HÀM GỬI TRANSACTION THẬT LÊN MẠNG LƯỚI - TRỪ TIỀN THẬT TRÊN VÍ TESTNET
+        // HÀM GỬI TRANSACTION FIX LỖI INVALID CHAIN ID
         async function executeRealOnChainTx() {
             if (!account) {
                 const isConnected = await connectWallet();
@@ -176,8 +137,6 @@
             }
 
             try {
-                await ensureArcNetwork();
-                
                 const amountInput = document.getElementById('swapAmount').value;
                 if (!amountInput || amountInput <= 0) {
                     alert("Vui lòng nhập số lượng hợp lệ!");
@@ -189,44 +148,35 @@
                 const hashLink = document.getElementById('txHashLink');
                 
                 statusBox.classList.remove('hidden');
-                statusText.innerText = "Đang khởi tạo giao dịch trên ví...";
+                statusText.innerText = "Đang khởi tạo giao dịch...";
                 statusText.className = "text-yellow-500 font-medium";
 
-                // Quy đổi số lượng token sang đơn vị Wei nhỏ nhất ứng với 6 decimals của USDC mạng Arc
+                // Sử dụng thư viện Ethers.js để tự động lấy cấu hình chuẩn từ chính ví MetaMask của bạn
+                const signer = await provider.getSigner();
                 const parsedValue = ethers.parseUnits(amountInput, 6);
-                const valueHex = ethers.toBeHex(parsedValue);
 
-                showToast("Vui lòng xác nhận và trả phí Gas trên cửa sổ MetaMask!");
+                showToast("Vui lòng duyệt giao dịch trên cửa sổ MetaMask!");
 
-                // GỬI TRANSACTION THẬT: Chuyển tiền từ ví bạn đến một địa chỉ ví test (hoặc ví của chính bạn)
-                // Để kích hoạt cơ chế trừ tiền thực tế và hiện bảng tính Gas của MetaMask.
-                const txParams = {
-                    from: account,
-                    to: account, // Chuyển tiền cho chính mình để test hoặc điền địa chỉ Smart Contract Router tại đây
-                    value: valueHex, // Số tiền bị trừ thật hiển thị trên ví
-                };
-
-                // Gọi MetaMask mở pop-up Transaction thực thụ
-                const txHash = await window.ethereum.request({
-                    method: 'eth_sendTransaction',
-                    params: [txParams],
+                // Gửi giao dịch thông qua Signer (Ethers tự động xử lý gas và chainId khớp hoàn toàn với ví)
+                const txResponse = await signer.sendTransaction({
+                    to: account, // Tự gửi cho chính mình để test trừ số dư thực tế
+                    value: parsedValue
                 });
 
                 statusText.innerText = "Đang chờ mạng lưới xác thực (Mined)...";
                 statusText.className = "text-blue-400 font-medium";
-                hashLink.innerText = txHash.substring(0,25) + "...";
-                hashLink.href = `https://testnet.arcscan.app/tx/${txHash}`;
+                hashLink.innerText = txResponse.hash.substring(0,25) + "...";
+                hashLink.href = `https://testnet.arcscan.app/tx/${txResponse.hash}`;
                 
-                showToast("Giao dịch đã được gửi! Đang đợi xuất hiện trên Block Explorer...");
+                showToast("Giao dịch đã gửi thành công! Chờ block xác nhận...");
 
-                // Đợi block được đào xong bằng Ethers.js để cập nhật số dư mới nhất
-                const signer = await provider.getSigner();
-                const receipt = await provider.waitForTransaction(txHash);
+                // Đợi giao dịch hoàn thành on-chain
+                const receipt = await txResponse.wait();
 
                 if (receipt.status === 1) {
                     statusText.innerText = "Thành công (Success)";
                     statusText.className = "text-green-400 font-medium";
-                    showToast("Hoán đổi thành công! Ví của bạn đã bị trừ tiền thật trên Testnet.");
+                    showToast("Giao dịch On-chain hoàn tất! Số dư ví đã bị thay đổi.");
                     await updateBalance();
                 } else {
                     statusText.innerText = "Giao dịch Thất bại";
@@ -234,10 +184,10 @@
                 }
 
             } catch (error) {
-                console.error("Lỗi giao dịch thật:", error);
-                document.getElementById('txStatusText').innerText = "Bị hủy / Lỗi mạng";
+                console.error("Lỗi giao dịch:", error);
+                document.getElementById('txStatusText').innerText = "Bị hủy hoặc Lỗi RPC";
                 document.getElementById('txStatusText').className = "text-red-500 font-medium";
-                showToast("Giao dịch bị từ chối hoặc ví không đủ số dư làm phí Gas.");
+                showToast("Giao dịch không thành công hoặc lỗi node RPC mạng.");
             }
         }
 
@@ -259,17 +209,17 @@
             window.open("https://faucet.circle.com", "_blank"); 
         }
 
-        // Tự động kiểm tra kết nối ví khi reload trang
         window.addEventListener('load', async () => {
             if (typeof window.ethereum !== 'undefined') {
                 const accounts = await window.ethereum.request({ method: 'eth_accounts' });
                 if (accounts.length > 0) {
                     account = accounts[0];
                     provider = new ethers.BrowserProvider(window.ethereum);
+                    await updateBalance();
+                    
                     const btn = document.getElementById('connectBtn');
                     btn.innerText = account.substring(0,6) + "..." + account.substring(account.length-4);
                     btn.className = "bg-green-600 hover:bg-green-700 px-5 py-2 rounded-lg text-sm font-medium transition";
-                    await updateBalance();
                 }
             }
         });
