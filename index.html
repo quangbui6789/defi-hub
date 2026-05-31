@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ARC AI-DEFI HUB (REAL ON-CHAIN)</title>
+    <!-- Nhúng thư viện Ethers.js v6 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.11.1/ethers.umd.min.js"></script>
     <style>
         :root {
@@ -174,6 +175,7 @@
     </div>
 
     <div class="container">
+        <!-- 1. TAB SWAP -->
         <div id="swap-tab" class="tab-content active">
             <div class="input-group">
                 <label>Từ Token</label>
@@ -199,6 +201,7 @@
             <button class="btn-action" onclick="uiSwap()">Xác Nhận Swap</button>
         </div>
 
+        <!-- 2. TAB LIQUIDITY -->
         <div id="liquidity-tab" class="tab-content">
             <h3>Liquidity Pool</h3>
             <div class="input-group">
@@ -218,6 +221,7 @@
             <button class="btn-action" onclick="uiAddLiquidity()">Thêm Thanh Khoản</button>
         </div>
 
+        <!-- 3. TAB LENDING -->
         <div id="lending-tab" class="tab-content">
             <h3>Lending Pool</h3>
             <div class="input-group">
@@ -237,6 +241,7 @@
             <button class="btn-action" onclick="uiLending()">Xác Nhận Lending</button>
         </div>
 
+        <!-- 4. TAB BORROW -->
         <div id="borrow-tab" class="tab-content">
             <h3>Borrow (Vay)</h3>
             <div class="input-group">
@@ -256,6 +261,7 @@
             <button class="btn-action" onclick="uiBorrow()">Xác Nhận Vay</button>
         </div>
 
+        <!-- 5. TAB BRIDGE -->
         <div id="bridge-tab" class="tab-content">
             <h3>Cross-Chain Bridge</h3>
             <div class="input-group">
@@ -290,6 +296,7 @@
     </div>
 
     <script>
+        // LƯU Ý: Nếu EURC vẫn là 0.0000, hãy kiểm tra lại xem chuỗi Hex của EURC_TOKEN dưới đây đã chuẩn xác chưa
         const DEPLOYED_CONTRACTS = {
             USDC_TOKEN: "0x3600000000000000000000000000000000000000", 
             EURC_TOKEN: "0x89b50b55aa3be2f677cd6303cec089b5f319d72a", 
@@ -332,7 +339,7 @@
             e.currentTarget.classList.add('active');
         }
 
-        // ĐÃ TỐI ƯU: Ép cứng hệ thập phân là 6 để giải quyết triệt để lỗi không nhận diện được decimals của EURC
+        // ĐÃ CẢI TIẾN: Báo lỗi RPC tường minh nếu contract bị lỗi hoặc sai địa chỉ thay vì trả về 0 ẩn danh
         async function getTokenBalance(tokenAddress, account) {
             try {
                 if(!window.ethereum || !account) return "0.0000";
@@ -341,7 +348,8 @@
                 const balance = await contract.balanceOf(account);
                 return parseFloat(ethers.formatUnits(balance, 6)).toFixed(4);
             } catch (err) {
-                console.error("Lỗi lấy số dư token: ", err);
+                console.error("Lỗi RPC balanceOf:", err);
+                updateLog(`Lỗi tải số dư của hợp đồng: ${tokenAddress.substring(0,8)}... vui lòng kiểm tra lại địa chỉ contract.`);
                 return "0.0000";
             }
         }
@@ -426,9 +434,14 @@
                 updateLog("Giao dịch Swap đang xử lý on-chain: " + tx.hash);
                 await tx.wait();
 
-                updateLog(`Giao dịch thành công hoàn toàn!`);
+                updateLog(`Giao dịch thành công hoàn toàn! Đang nạp lại số dư...`);
                 alert("Hoán đổi thành công!");
-                setTimeout(async () => { await updateAllBalances(); }, 1000); 
+                
+                // Vòng lặp cưỡng bức cập nhật lại trạng thái ví sau block confirmation
+                for(let i=1; i<=3; i++) {
+                    await new Promise(r => setTimeout(r, i * 1000));
+                    await updateAllBalances();
+                }
             } catch (err) {
                 console.error(err);
                 updateLog("Giao dịch lỗi/bị hủy: " + (err.reason || err.message));
