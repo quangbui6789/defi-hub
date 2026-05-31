@@ -118,9 +118,9 @@
     <script>
         let account = "";
 
-        // Thông số chuẩn mạng Arc Testnet (Phí Gas tính bằng USDC)
+        // Định nghĩa cấu hình Arc Testnet (Sử dụng USDC làm native gas token)
         const ARC_TESTNET_PARAMS = {
-            chainId: "0x4CECE6", // 5042002 dạng hex
+            chainId: "0x4CECE6", // Chain ID: 5042002 dạng hex
             chainName: "Arc Testnet",
             rpcUrls: ["https://arc-testnet.drpc.org"], 
             nativeCurrency: {
@@ -138,8 +138,9 @@
             setTimeout(() => toast.classList.add('hidden'), 4000);
         }
 
-        // Ép ví chuyển sang Arc Testnet hoặc thêm mạng nếu chưa có
+        // Ép ví chuyển đổi hoặc thêm mạng Arc Testnet tự động
         async function ensureArcNetwork() {
+            if (typeof window.ethereum === 'undefined') return false;
             try {
                 await window.ethereum.request({
                     method: 'wallet_switchEthereumChain',
@@ -155,7 +156,7 @@
                         });
                         return true;
                     } catch (addError) {
-                        console.error("Không thể add mạng Arc:", addError);
+                        console.error("Không thể thêm mạng Arc:", addError);
                         return false;
                     }
                 }
@@ -166,18 +167,18 @@
         // Kết nối ví
         async function connectWallet() {
             if (typeof window.ethereum === 'undefined') {
-                alert("Không tìm thấy tiện ích ví! Nếu dùng điện thoại, vui lòng copy link này mở trong mục 'Trình duyệt' bên trong ứng dụng MetaMask.");
+                alert("Không tìm thấy ví! Hãy dùng trình duyệt dApp của MetaMask/Rabby.");
                 return;
             }
             
             try {
-                showToast("Đang yêu cầu kết nối ví...");
+                showToast("Đang kết nối tới ví Web3...");
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
                 
                 if (accounts.length > 0) {
                     account = accounts[0];
                     
-                    // Chuyển mạng Arc ngay khi kết nối thành công
+                    // Gọi kiểm tra chuyển mạng Arc
                     await ensureArcNetwork();
 
                     document.getElementById('connectBtn').innerText = account.substring(0,6) + "..." + account.substring(account.length-4);
@@ -186,31 +187,31 @@
                 }
             } catch (err) {
                 console.error(err);
-                showToast("Lỗi kết nối: Vui lòng mở khóa ví của bạn.");
+                showToast("Kết nối thất bại. Hãy mở khóa ứng dụng ví.");
             }
         }
 
-        // Gọi ký lệnh giao dịch và hiển thị Gas USDC Testnet
+        // Kích hoạt ký lệnh giao dịch và tính phí Gas bằng USDC Testnet
         async function executeArcTx(successMessage) {
             if (!account) {
                 return alert("Vui lòng kết nối ví ở góc phải trước!");
             }
             
             try {
-                showToast("Đang kiểm tra cấu hình mạng Arc...");
+                showToast("Đang kiểm tra trạng thái mạng lưới...");
                 const networkOk = await ensureArcNetwork();
                 if (!networkOk) return;
 
-                showToast("Đang khởi tạo cửa sổ ký lệnh giao dịch...");
+                showToast("Đang yêu cầu ký giao dịch xác thực...");
 
-                // Gọi RPC trực tiếp từ window.ethereum để tránh lỗi thư viện
-                // Cấu hình sàn 20 Gwei bằng định dạng Hex để ví tính đúng phí gas USDC của mạng Arc
+                // Khởi tạo Transaction Object truyền trực tiếp qua API window.ethereum
+                // maxFeePerGas ép cố định 20 Gwei (0x4A817C800) theo chuẩn Arc Testnet
                 const txParams = {
                     from: account,
-                    to: account, // Gửi lệnh test loop back về chính ví để kiểm tra gas
+                    to: account, // Gửi transaction tuần hoàn về chính mình để test UI ký gas
                     value: "0x0",
-                    gas: "0x249F0", // 150,000 gas limit dạng hex
-                    maxFeePerGas: "0x4A817C800", // 20 Gwei (sàn mạng Arc) dạng hex
+                    gas: "0x249F0", // Tương đương 150,000 gas limit dạng hex
+                    maxFeePerGas: "0x4A817C800", 
                     maxPriorityFeePerGas: "0x77359400" // 2 Gwei dạng hex
                 };
 
@@ -219,27 +220,32 @@
                     params: [txParams],
                 });
 
-                showToast("Giao dịch đã gửi! Hash: " + txHash.substring(0, 12) + "...");
+                showToast("Giao dịch đang được xử lý... Hash: " + txHash.substring(0, 14) + "...");
                 
-                // Giả lập chờ chuỗi xử lý block xong
+                // Giả lập thời gian block confirmation
                 setTimeout(() => {
                     showToast(successMessage);
-                }, 3000);
+                }, 3500);
 
             } catch (error) {
                 console.error("Lỗi giao dịch:", error);
                 if (error.code === 4001) {
-                    showToast("Bạn đã từ chối ký lệnh giao dịch.");
+                    showToast("Bạn đã từ chối ký giao dịch.");
                 } else {
-                    showToast("Giao dịch thất bại. Hãy chắc chắn ví của bạn có sẵn USDC Testnet làm phí gas!");
+                    showToast("Giao dịch thất bại! Hãy chắc chắn số dư ví của bạn có đủ USDC mạng Arc Testnet để trả phí gas.");
                 }
             }
         }
 
+        // Điều hướng nhận token testnet
         function handleFaucet() {
             if(!account) return alert("Vui lòng kết nối ví ở góc phải trước!");
-            showToast("Đang xử lý cấp token testnet miễn phí ($tUSDT, $tBTC và $USDC Gas)...");
-            setTimeout(() => showToast("Cấp token testnet thành công! Hãy kiểm tra số dư ví."), 2500);
+            showToast("Đang mở trang vòi cấp token USDC Gas Testnet mạng Arc...");
+            
+            // Tự động mở link faucet trong tab mới sau 1 giây. Bạn có thể thay link mong muốn tại đây.
+            setTimeout(() => {
+                window.open("https://faucet.circle.com", "_blank"); 
+            }, 1000);
         }
 
         function calculateSwap() {
