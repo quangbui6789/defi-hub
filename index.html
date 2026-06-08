@@ -293,7 +293,8 @@
         const RAW_CONTRACTS = {
             USDC_TOKEN: "0x3600000000000000000000000000000000000000", 
             EURC_TOKEN: "0x89b50855aa3be2f677cd6303cec089b5f319d72a", 
-            SWAP_POOL_ROUTER: "0x6e668380dfd601362de6916b3d66bb11cee0294e", 
+            // Đã tích hợp địa chỉ contract MultiDex mới tạo của bạn vào đây
+            SWAP_POOL_ROUTER: "0x1f8253B5cBbE16c991a16A8bf2AAaAFea5b834b9", 
             LENDING_POOL: "0x980f1a6a5b92c7f723ac2169e2ebf73b88b8cbe0",
             BRIDGE_CONTRACT: "0xd10904f6d8a29397686b24d776472481f4b41ebf"
         };
@@ -307,9 +308,9 @@
             "function balanceOf(address account) public view returns (uint256)"
         ];
 
+        // Cấu hình ABI chuẩn khớp 100% với hàm trade() của contract MultiDex
         const SWAP_POOL_ABI = [
-            "function swap(address fromToken, address toToken, uint256 amountIn) external",
-            "function addLiquidity(uint256 amountUSDC, uint256 amountEURC) external returns (uint256 liquidity)"
+            "function trade(address _tokenAddress, uint256 _amountIn) external"
         ];
 
         const LENDING_POOL_ABI = [
@@ -393,7 +394,6 @@
             }
         }
 
-        // Tối ưu hóa chu kỳ quét: tăng số lần quét và kéo giãn thời gian để đồng bộ chuẩn xác với block on-chain
         async function triggerMultiBalanceRefresh() {
             const delays = [1500, 3000, 4500, 6000]; 
             for (const delay of delays) {
@@ -424,6 +424,7 @@
             updateLog("Đã ngắt kết nối ví.");
         }
 
+        // HÀM UI SWAP KẾT NỐI TRỰC TIẾP VỚI CONTRACT MULTIDEX CỦA BẠN
         async function uiSwap() {
             if (!userAddress) return alert("Vui lòng kết nối ví trước!");
             const fromSymbol = document.getElementById('swapFromToken').value;
@@ -436,7 +437,6 @@
             if (!amountIn || amountIn <= 0) return alert("Vui lòng nhập số lượng hợp lệ!");
 
             const fromAddress = getSafeAddress(fromSymbol === "USDC" ? RAW_CONTRACTS.USDC_TOKEN : RAW_CONTRACTS.EURC_TOKEN);
-            const toAddress = getSafeAddress(toSymbol === "USDC" ? RAW_CONTRACTS.USDC_TOKEN : RAW_CONTRACTS.EURC_TOKEN);
 
             try {
                 const provider = new ethers.BrowserProvider(window.ethereum);
@@ -447,28 +447,28 @@
                 
                 const parsedAmountIn = ethers.parseUnits(amountIn, 6);
 
-                updateLog(`[1/2] Đang gọi quyền chi tiêu (Approve) ${fromSymbol}...`);
+                updateLog(`[1/2] Đang gọi quyền duyệt chi (Approve) ${fromSymbol}...`);
                 let approveTx = await tokenInContract.approve(targetRouter, parsedAmountIn);
                 await approveTx.wait();
                 
-                updateLog(`[2/2] Approve thành công! Đang thực thi lệnh hoán đổi trên Router mạng Arc...`);
-                let tx = await swapContract.swap(fromAddress, toAddress, parsedAmountIn, {
+                updateLog(`[2/2] Approve thành công! Đang gọi hàm trade() lên Contract MultiDex của bạn...`);
+                // Thực thi hàm trade() với 2 tham số: Địa chỉ token đầu vào và số lượng token
+                let tx = await swapContract.trade(fromAddress, parsedAmountIn, {
                     gasLimit: 300000 
                 });
                 
-                updateLog("Giao dịch đang được đóng block: " + tx.hash);
+                updateLog("Giao dịch hoán đổi đang được xử lý: " + tx.hash);
                 await tx.wait();
 
-                updateLog(`Giao dịch thành công! Đang kích hoạt quét đồng bộ số dư...`);
-                alert("Hoán đổi thành công!");
+                updateLog(`Giao dịch thành công! Token ${fromSymbol} của bạn đã được hoán đổi trên chuỗi.`);
+                alert("Hoán đổi thành công on-chain!");
                 
-                // Đồng bộ lại số dư ngay lập tức và chạy chu kỳ quét ngầm
                 await updateAllBalances();
                 await triggerMultiBalanceRefresh();
             } catch (err) {
                 console.error(err);
                 updateLog("Giao dịch lỗi/bị hủy: " + (err.reason || err.message));
-                alert("Lỗi: Giao dịch bị từ chối hoặc Smart Contract báo lỗi Revert.");
+                alert("Lỗi: Giao dịch bị từ chối hoặc Smart Contract báo lỗi.");
             }
         }
 
