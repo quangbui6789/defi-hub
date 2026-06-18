@@ -424,16 +424,15 @@
             updateLog("Đã ngắt kết nối ví.");
         }
 
-        // Tăng mạnh biên độ gas (1.8x) để ép MetaMask không chạy hàm tự tính toán gas vòng lặp liên tục gây lỗi Review Alert
-        async function getOptimizedGasFees(provider) {
+        // Chuyển hoàn toàn sang cấu hình Legacy Gas Price cố định siêu cao (25 Gwei) để ép MetaMask tắt bộ đệm tự động cập nhật phí
+        async function getLegacyGasParam(provider) {
             try {
                 const feeData = await provider.getFeeData();
-                const optimizedMaxFee = feeData.maxFeePerGas ? (feeData.maxFeePerGas * 180n) / 100n : undefined;
-                const optimizedPriorityFee = feeData.maxPriorityFeePerGas ? (feeData.maxPriorityFeePerGas * 180n) / 100n : undefined;
-                return { maxFeePerGas: optimizedMaxFee, maxPriorityFeePerGas: optimizedPriorityFee };
+                // Sử dụng gasPrice trực tiếp thay vì maxFeePerGas để kích hoạt giao dịch Legacy
+                let targetGasPrice = feeData.gasPrice ? (feeData.gasPrice * 200n) / 100n : ethers.parseUnits("25", "gwei");
+                return { gasPrice: targetGasPrice };
             } catch (e) {
-                console.error("Không thể lấy dữ liệu gas tự động:", e);
-                return {};
+                return { gasPrice: ethers.parseUnits("25", "gwei") };
             }
         }
 
@@ -462,14 +461,13 @@
                 updateLog(`Đang kiểm tra quyền hạn (allowance) của ${fromSymbol}...`);
                 const allowance = await tokenInContract.allowance(getSafeAddress(userAddress), targetRouter);
                 
-                const gasFees = await getOptimizedGasFees(provider);
+                const gasParams = await getLegacyGasParam(provider);
 
                 if (BigInt(allowance) < BigInt(parsedAmountIn)) {
                     updateLog(`Hạn mức chưa đủ. Đang gửi yêu cầu Approve ${fromSymbol}...`);
-                    // Thêm gasLimit cố định cho lệnh Approve để MetaMask bỏ qua bước tự tính toán gas lỗi thời
                     let approveTx = await tokenInContract.approve(targetRouter, parsedAmountIn, { 
-                        gasLimit: 100000,
-                        ...gasFees 
+                        gasLimit: 80000,
+                        ...gasParams 
                     });
                     updateLog(`Giao dịch Approve đã phát lên mạng: ${approveTx.hash}. Chờ xác nhận...`);
                     await approveTx.wait();
@@ -479,8 +477,8 @@
                 updateLog(`Đang tiến hành gọi trade()...`);
                 
                 let tx = await swapContract.trade(fromAddress, parsedAmountIn, {
-                    gasLimit: 300000,
-                    ...gasFees
+                    gasLimit: 280000,
+                    ...gasParams
                 });
                 
                 updateLog("Giao dịch hoán đổi đang xử lý: " + tx.hash);
@@ -506,10 +504,10 @@
                 const provider = new ethers.BrowserProvider(window.ethereum);
                 const signer = await provider.getSigner();
                 const usdc = new ethers.Contract(getSafeAddress(RAW_CONTRACTS.USDC_TOKEN), ERC20_ABI, signer);
-                const gasFees = await getOptimizedGasFees(provider);
+                const gasParams = await getLegacyGasParam(provider);
                 
                 updateLog("Đang Approve USDC...");
-                let tx = await usdc.approve(targetPool, ethers.parseUnits(amountUSDC.toString(), 6), { gasLimit: 100000, ...gasFees });
+                let tx = await usdc.approve(targetPool, ethers.parseUnits(amountUSDC.toString(), 6), { gasLimit: 80000, ...gasParams });
                 await tx.wait();
                 updateLog("Approve USDC thành công! Tiếp tục bấm Approve EURC.");
             } catch (err) { 
@@ -527,10 +525,10 @@
                 const provider = new ethers.BrowserProvider(window.ethereum);
                 const signer = await provider.getSigner();
                 const eurc = new ethers.Contract(getSafeAddress(RAW_CONTRACTS.EURC_TOKEN), ERC20_ABI, signer);
-                const gasFees = await getOptimizedGasFees(provider);
+                const gasParams = await getLegacyGasParam(provider);
 
                 updateLog("Đang Approve EURC...");
-                let tx = await eurc.approve(targetPool, ethers.parseUnits(amountEURC.toString(), 6), { gasLimit: 100000, ...gasFees });
+                let tx = await eurc.approve(targetPool, ethers.parseUnits(amountEURC.toString(), 6), { gasLimit: 80000, ...gasParams });
                 await tx.wait();
                 updateLog("Approve EURC thành công! Bấm Xác Nhận Thêm Thanh Khoản.");
             } catch (err) { 
@@ -551,15 +549,15 @@
                 const provider = new ethers.BrowserProvider(window.ethereum);
                 const signer = await provider.getSigner();
                 const swapPool = new ethers.Contract(targetPool, SWAP_POOL_ABI, signer);
-                const gasFees = await getOptimizedGasFees(provider);
+                const gasParams = await getLegacyGasParam(provider);
 
                 updateLog("Đang tiến hành gửi lệnh addLiquidity()...");
                 let tx = await swapPool.addLiquidity(
                     ethers.parseUnits(amountUSDC.toString(), 6), 
                     ethers.parseUnits(amountEURC.toString(), 6),
                     { 
-                        gasLimit: 400000,
-                        ...gasFees
+                        gasLimit: 380000,
+                        ...gasParams
                     }
                 );
                 await tx.wait();
@@ -586,10 +584,10 @@
                 const provider = new ethers.BrowserProvider(window.ethereum);
                 const signer = await provider.getSigner();
                 const token = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
-                const gasFees = await getOptimizedGasFees(provider);
+                const gasParams = await getLegacyGasParam(provider);
                 
                 updateLog(`Đang duyệt chi (Approve) ${tokenSymbol} cho Lending Pool...`);
-                let tx = await token.approve(targetPool, ethers.parseUnits(amount.toString(), 6), { gasLimit: 100000, ...gasFees });
+                let tx = await token.approve(targetPool, ethers.parseUnits(amount.toString(), 6), { gasLimit: 80000, ...gasParams });
                 await tx.wait();
                 updateLog(`Approve ${tokenSymbol} thành công! Hãy bấm Xác Nhận Gửi (Deposit).`);
             } catch (err) {
@@ -611,12 +609,12 @@
                 const provider = new ethers.BrowserProvider(window.ethereum);
                 const signer = await provider.getSigner();
                 const lending = new ethers.Contract(targetPool, LENDING_POOL_ABI, signer);
-                const gasFees = await getOptimizedGasFees(provider);
+                const gasParams = await getLegacyGasParam(provider);
                 
                 updateLog("Đang tiến hành gửi tài sản thông qua deposit()...");
                 let tx = await lending.deposit(tokenAddress, ethers.parseUnits(amount.toString(), 6), { 
-                    gasLimit: 300000,
-                    ...gasFees 
+                    gasLimit: 280000,
+                    ...gasParams 
                 });
                 await tx.wait();
                 
@@ -642,12 +640,12 @@
                 const provider = new ethers.BrowserProvider(window.ethereum);
                 const signer = await provider.getSigner();
                 const lending = new ethers.Contract(targetPool, LENDING_POOL_ABI, signer);
-                const gasFees = await getOptimizedGasFees(provider);
+                const gasParams = await getLegacyGasParam(provider);
 
                 updateLog(`Đang thực hiện lệnh vay borrow() ${amount} ${tokenSymbol}...`);
                 let tx = await lending.borrow(tokenAddress, ethers.parseUnits(amount.toString(), 6), { 
-                    gasLimit: 300000,
-                    ...gasFees
+                    gasLimit: 280000,
+                    ...gasParams
                 });
                 await tx.wait();
                 updateLog(`Vay thành công ${amount} ${tokenSymbol}!`);
@@ -672,10 +670,10 @@
                 const provider = new ethers.BrowserProvider(window.ethereum);
                 const signer = await provider.getSigner();
                 const token = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
-                const gasFees = await getOptimizedGasFees(provider);
+                const gasParams = await getLegacyGasParam(provider);
 
                 updateLog(`Đang Approve ${tokenSymbol} cho Cầu nối (Bridge)...`);
-                let tx = await token.approve(targetBridge, ethers.parseUnits(amount.toString(), 6), { gasLimit: 100000, ...gasFees });
+                let tx = await token.approve(targetBridge, ethers.parseUnits(amount.toString(), 6), { gasLimit: 80000, ...gasParams });
                 await tx.wait();
                 updateLog(`Approve thành công!`);
             } catch (err) {
@@ -700,7 +698,7 @@
                 const provider = new ethers.BrowserProvider(window.ethereum);
                 const signer = await provider.getSigner();
                 const bridge = new ethers.Contract(targetBridge, BRIDGE_ABI, signer);
-                const gasFees = await getOptimizedGasFees(provider);
+                const gasParams = await getLegacyGasParam(provider);
 
                 updateLog(`Đang gửi lệnh bridgeAsset()...`);
                 let tx = await bridge.bridgeAsset(
@@ -709,8 +707,8 @@
                     ethers.parseUnits(amount.toString(), 6), 
                     getSafeAddress(recipient),
                     { 
-                        gasLimit: 350000,
-                        ...gasFees
+                        gasLimit: 320000,
+                        ...gasParams
                     }
                 );
                 updateLog("Đang xử lý giao dịch qua cầu: " + tx.hash);
