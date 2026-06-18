@@ -297,10 +297,8 @@
     </div>
 
     <script>
-        // LƯU Ý QUAN TRỌNG: Hãy thay thế địa chỉ USDC_TOKEN thực tế của mạng Testnet vào đây.
-        // Không được sử dụng địa chỉ rỗng 0x3600000000000000000000000000000000000000
         const RAW_CONTRACTS = {
-            USDC_TOKEN: "0x63351Ec7843815b1395E14b6bcFeAF491ee46061", // ĐÃ CẬP NHẬT: Thay địa chỉ Testnet thật của bạn vào đây nếu có thay đổi
+            USDC_TOKEN: "0x63351Ec7843815b1395E14b6bcFeAF491ee46061", 
             EURC_TOKEN: "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a", 
             SWAP_POOL_ROUTER: "0x8D02E191dDa6da9a2F8De7bd46caF795D3e3Bc9c", 
             LENDING_POOL: "0x980f1a6a5b92c7f723ac2169e2ebf73b88b8cbe0",
@@ -317,8 +315,9 @@
             "function allowance(address owner, address spender) external view returns (uint256)"
         ];
 
+        // ĐÃ SỬA: Cập nhật đúng chuẩn ABI của hàm trade chứa tham số bảo vệ trượt giá
         const SWAP_POOL_ABI = [
-            "function trade(address _tokenAddress, uint256 _amountIn) external",
+            "function trade(address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOutMin, address recipient, uint256 deadline) external returns (uint256)",
             "function addLiquidity(uint256 _amountUSDC, uint256 _amountEURC) external"
         ];
 
@@ -435,6 +434,7 @@
             updateLog("Đã ngắt kết nối ví.");
         }
 
+        /* --- ĐÃ SỬA TOÀN BỘ LOGIC HÀM UI SWAP ĐỂ KHÔNG BỊ REVERT --- */
         async function uiSwap() {
             if (!userAddress) return alert("Vui lòng kết nối ví trước!");
             const fromSymbol = document.getElementById('swapFromToken').value;
@@ -447,6 +447,7 @@
             if (!amountIn || amountIn <= 0) return alert("Vui lòng nhập số lượng hợp lệ!");
 
             const fromAddress = getSafeAddress(fromSymbol === "USDC" ? RAW_CONTRACTS.USDC_TOKEN : RAW_CONTRACTS.EURC_TOKEN);
+            const toAddress = getSafeAddress(toSymbol === "USDC" ? RAW_CONTRACTS.USDC_TOKEN : RAW_CONTRACTS.EURC_TOKEN);
 
             try {
                 const provider = new ethers.BrowserProvider(window.ethereum);
@@ -469,9 +470,24 @@
                     updateLog(`Đã được cấp quyền trước đó. Tiến hành thực thi trade()...`);
                 }
                 
-                let tx = await swapContract.trade(fromAddress, parsedAmountIn, {
-                    gasLimit: 300000 
-                });
+                // Tính toán trượt giá 1% an toàn để sửa lỗi Block Time Revert trên Arc Network
+                const expectedOutput = parsedAmountIn; 
+                const amountOutMin = (expectedOutput * 99n) / 100n; 
+
+                // Tạo thời gian hết hạn lệnh (Deadline = Hiện tại + 5 phút)
+                const deadline = Math.floor(Date.now() / 1000) + (60 * 5);
+
+                updateLog(`Giao dịch hoán đổi đang gửi dữ liệu lên Smart Contract...`);
+
+                // Gọi hàm trade với đầy đủ 6 tham số chuẩn chống lỗi Reverted
+                let tx = await swapContract.trade(
+                    fromAddress,
+                    toAddress,
+                    parsedAmountIn,
+                    amountOutMin,
+                    getSafeAddress(userAddress),
+                    deadline
+                );
                 
                 updateLog("Giao dịch hoán đổi đang xử lý: " + tx.hash);
                 await tx.wait();
@@ -682,8 +698,8 @@
                     gasLimit: 300000 
                 });
                 await tx.wait();
-                updateLog("Kích hoạt lệnh cầu nối Cross-Chain thành công!");
-                alert("Gửi tài sản qua cầu nối thành công!");
+                updateLog("Chuyển chuỗi tài sản thành công!");
+                alert("Kích hoạt cầu nối thành công!");
                 await updateAllBalances();
             } catch (err) {
                 updateLog("Lỗi Bridge: " + err.message);
