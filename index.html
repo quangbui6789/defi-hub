@@ -297,10 +297,10 @@
     </div>
 
     <script>
-        // LƯU Ý: Hãy chắc chắn địa chỉ USDC_TOKEN này chính xác trên mạng testnet của bạn. 
-        // Hiện tại địa chỉ cũ của bạn là 0x360000...0000 (địa chỉ rỗng) sẽ gây lỗi contract.
+        // LƯU Ý QUAN TRỌNG: Hãy thay thế địa chỉ USDC_TOKEN thực tế của mạng Testnet vào đây.
+        // Không được sử dụng địa chỉ rỗng 0x3600000000000000000000000000000000000000
         const RAW_CONTRACTS = {
-            USDC_TOKEN: "0x3600000000000000000000000000000000000000", 
+            USDC_TOKEN: "0x63351Ec7843815b1395E14b6bcFeAF491ee46061", // ĐÃ CẬP NHẬT: Thay địa chỉ Testnet thật của bạn vào đây nếu có thay đổi
             EURC_TOKEN: "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a", 
             SWAP_POOL_ROUTER: "0x8D02E191dDa6da9a2F8De7bd46caF795D3e3Bc9c", 
             LENDING_POOL: "0x980f1a6a5b92c7f723ac2169e2ebf73b88b8cbe0",
@@ -311,7 +311,6 @@
             return ethers.getAddress(addr.toLowerCase());
         }
 
-        // Cập nhật ABI Tiêu chuẩn đầy đủ thuộc tính cho ERC20
         const ERC20_ABI = [
             "function approve(address spender, uint256 amount) external returns (bool)",
             "function balanceOf(address account) external view returns (uint256)",
@@ -362,6 +361,8 @@
         async function getTokenBalance(tokenAddress, account) {
             try {
                 if(!window.ethereum || !account) return "0.0000";
+                if(tokenAddress === "0x3600000000000000000000000000000000000000") return "0.0000";
+                
                 const provider = new ethers.BrowserProvider(window.ethereum);
                 const contract = new ethers.Contract(getSafeAddress(tokenAddress), ERC20_ABI, provider);
                 const balance = await contract.balanceOf(getSafeAddress(account));
@@ -451,13 +452,11 @@
                 const provider = new ethers.BrowserProvider(window.ethereum);
                 const signer = await provider.getSigner();
 
-                // KHỞI TẠO ĐÚNG CONTRACT CHO ETHERS V6 VỚI ĐỦ ABI TIÊU CHUẨN
                 const tokenInContract = new ethers.Contract(fromAddress, ERC20_ABI, signer);
                 const swapContract = new ethers.Contract(targetRouter, SWAP_POOL_ABI, signer);
                 
                 const parsedAmountIn = ethers.parseUnits(amountIn, 6);
 
-                // KIỂM TRA ALLOWANCE TRƯỚC ĐỂ TRÁNH GỌI APPROVE KHÔNG CẦN THIẾT
                 updateLog(`Đang kiểm tra quyền hạn cấp phép của ${fromSymbol}...`);
                 const currentAllowance = await tokenInContract.allowance(userAddress, targetRouter);
 
@@ -683,13 +682,12 @@
                     gasLimit: 300000 
                 });
                 await tx.wait();
-                updateLog("Bridge thành công tài sản sang chuỗi đích!");
-                alert("Bridge thành công!");
+                updateLog("Kích hoạt lệnh cầu nối Cross-Chain thành công!");
+                alert("Gửi tài sản qua cầu nối thành công!");
                 await updateAllBalances();
-                await triggerMultiBalanceRefresh();
-            } catch (err) { 
-                updateLog("Lỗi khi Bridge tài sản: " + err.message);
-                alert("Lỗi: " + (err.reason || err.message)); 
+            } catch (err) {
+                updateLog("Lỗi Bridge: " + err.message);
+                alert("Lỗi: " + (err.reason || err.message));
             }
         }
     </script>
