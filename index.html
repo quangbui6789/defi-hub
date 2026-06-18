@@ -317,7 +317,7 @@
         ];
 
         const SWAP_POOL_ABI = [
-            "function trade(address _tokenAddress, uint256 _amountIn) external",
+            "function trade(address _tokenAddress, uint226 _amountIn) external",
             "function addLiquidity(uint256 _amountUSDC, uint256 _amountEURC) external"
         ];
 
@@ -424,6 +424,7 @@
             updateLog("Đã ngắt kết nối ví.");
         }
 
+        /* TỐI ƯU HÀM SWAP HOÀN TOÀN MỚI */
         async function uiSwap() {
             if (!userAddress || !window.ethereum) return alert("Vui lòng kết nối ví trước!");
             const fromSymbol = document.getElementById('swapFromToken').value;
@@ -449,37 +450,29 @@
                 updateLog(`Đang kiểm tra quyền hạn (allowance) của ${fromSymbol}...`);
                 const allowance = await tokenInContract.allowance(getSafeAddress(userAddress), targetRouter);
 
-                // Fix lỗi so sánh BigInt bằng cách so sánh thuần cấu trúc chuẩn của JS BigInt
                 if (BigInt(allowance) < BigInt(parsedAmountIn)) {
                     updateLog(`Hạn mức chưa đủ. Đang gửi yêu cầu Approve ${fromSymbol}...`);
                     let approveTx = await tokenInContract.approve(targetRouter, parsedAmountIn);
-                    updateLog(`Giao dịch Approve đã phát lên mạng lưới: ${approveTx.hash}. Đang đợi xác nhận...`);
+                    updateLog(`Giao dịch Approve đã phát lên mạng: ${approveTx.hash}. Chờ xác nhận...`);
                     await approveTx.wait();
-                    updateLog(`Approve thành công! Đang tiến hành thực thi giao dịch trade()...`);
-                } else {
-                    updateLog(`Hạn mức đầy đủ. Tiến hành gọi trade()...`);
+                    updateLog(`Approve thành công!`);
                 }
                 
-                let tx = await swapContract.trade(fromAddress, parsedAmountIn, {
-                    gasLimit: 650000 
-                });
+                updateLog(`Đang tiến hành gọi trade()...`);
+                // BỎ QUA hardcode gasLimit lỗi, để mạng tự tính toán động linh hoạt hơn
+                let tx = await swapContract.trade(fromAddress, parsedAmountIn);
                 
                 updateLog("Giao dịch hoán đổi đang xử lý: " + tx.hash);
                 await tx.wait();
 
                 updateLog(`Hoán đổi thành công 100%!`);
                 alert("Hoán đổi thành công on-chain!");
-                
                 await updateAllBalances();
             } catch (err) {
                 console.error(err);
                 let reason = err.reason || err.message;
-                if(reason.includes("rate limited") || reason.includes("429")) {
-                    updateLog("Lỗi: RPC Node đang bị nghẽn (Rate Limit). Hãy đợi chút rồi thử lại.");
-                } else {
-                    updateLog("Giao dịch lỗi: " + reason);
-                }
-                alert("Lỗi giao dịch! Kiểm tra lại số dư hoặc số lượng Pool.");
+                updateLog("Giao dịch lỗi: " + reason);
+                alert("Lỗi giao dịch! Kiểm tra lại số dư hoặc trạng thái thanh khoản của Pool.");
             }
         }
 
@@ -535,7 +528,7 @@
                 const signer = await provider.getSigner();
                 const swapPool = new ethers.Contract(targetPool, SWAP_POOL_ABI, signer);
                 updateLog("Đang tiến hành gửi lệnh addLiquidity()...");
-                let tx = await swapPool.addLiquidity(ethers.parseUnits(amountUSDC.toString(), 6), ethers.parseUnits(amountEURC.toString(), 6), { gasLimit: 700000 });
+                let tx = await swapPool.addLiquidity(ethers.parseUnits(amountUSDC.toString(), 6), ethers.parseUnits(amountEURC.toString(), 6));
                 await tx.wait();
                 updateLog("Nạp thanh khoản on-chain thành công!");
                 alert("Nạp thanh khoản vào Pool thành công!");
@@ -587,7 +580,7 @@
                 const lending = new ethers.Contract(targetPool, LENDING_POOL_ABI, signer);
                 
                 updateLog("Đang tiến hành gửi tài sản thông qua deposit()...");
-                let tx = await lending.deposit(tokenAddress, ethers.parseUnits(amount.toString(), 6), { gasLimit: 550000 });
+                let tx = await lending.deposit(tokenAddress, ethers.parseUnits(amount.toString(), 6));
                 await tx.wait();
                 
                 updateLog(`Lending thành công 100%!`);
@@ -614,7 +607,7 @@
                 const signer = await provider.getSigner();
                 const lending = new ethers.Contract(targetPool, LENDING_POOL_ABI, signer);
                 updateLog(`Đang thực hiện lệnh vay borrow() ${amount} ${tokenSymbol}...`);
-                let tx = await lending.borrow(tokenAddress, ethers.parseUnits(amount.toString(), 6), { gasLimit: 550000 });
+                let tx = await lending.borrow(tokenAddress, ethers.parseUnits(amount.toString(), 6));
                 await tx.wait();
                 updateLog(`Vay thành công ${amount} ${tokenSymbol}!`);
                 alert("Vay tài sản thành công!");
@@ -672,16 +665,16 @@
                     BigInt(targetChainId), 
                     tokenAddress, 
                     ethers.parseUnits(amount.toString(), 6), 
-                    getSafeAddress(recipient), 
-                    { gasLimit: 550000 }
+                    getSafeAddress(recipient)
                 );
+                updateLog("Đang xử lý giao dịch qua cầu: " + tx.hash);
                 await tx.wait();
-                updateLog(`Bridge thành công!`);
-                alert("Kích hoạt cầu nối thành công!");
+                updateLog("Bridge thành công!");
+                alert("Tài sản đã được chuyển đi thành công!");
                 await updateAllBalances();
             } catch (err) {
                 updateLog("Lỗi Bridge: " + (err.reason || err.message));
-                alert("Lỗi: " + (err.reason || err.message));
+                alert("Lỗi Bridge: " + (err.reason || err.message));
             }
         }
     </script>
