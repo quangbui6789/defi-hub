@@ -312,12 +312,13 @@
 
         const ERC20_ABI = [
             "function approve(address spender, uint256 amount) public returns (bool)",
-            "function allowance(address owner, address spender) public view returns (uint256)",
+            "function allowance(address owner, address spender) public view returns (uint226)",
             "function balanceOf(address account) public view returns (uint256)"
         ];
 
+        /* ĐÃ SỬA uint226 THÀNH uint256 TẠI ĐÂY */
         const SWAP_POOL_ABI = [
-            "function trade(address _tokenAddress, uint226 _amountIn) external",
+            "function trade(address _tokenAddress, uint256 _amountIn) external", 
             "function addLiquidity(uint256 _amountUSDC, uint256 _amountEURC) external"
         ];
 
@@ -424,7 +425,6 @@
             updateLog("Đã ngắt kết nối ví.");
         }
 
-        /* TỐI ƯU HÀM SWAP HOÀN TOÀN MỚI */
         async function uiSwap() {
             if (!userAddress || !window.ethereum) return alert("Vui lòng kết nối ví trước!");
             const fromSymbol = document.getElementById('swapFromToken').value;
@@ -459,7 +459,6 @@
                 }
                 
                 updateLog(`Đang tiến hành gọi trade()...`);
-                // BỎ QUA hardcode gasLimit lỗi, để mạng tự tính toán động linh hoạt hơn
                 let tx = await swapContract.trade(fromAddress, parsedAmountIn);
                 
                 updateLog("Giao dịch hoán đổi đang xử lý: " + tx.hash);
@@ -476,7 +475,6 @@
             }
         }
 
-        /* --- CÁC HÀM THANH KHOẢN (LIQUIDITY) --- */
         async function approveUSDC() {
             if (!userAddress || !window.ethereum) return alert("Vui lòng kết nối ví!");
             const amountUSDC = document.getElementById('liquidityUsdcAmount').value;
@@ -540,7 +538,6 @@
             }
         }
 
-        /* --- CÁC HÀM LENDINGPOOL --- */
         async function approveLending() {
             if (!userAddress || !window.ethereum) return alert("Vui lòng kết nối ví trước!");
             const tokenSymbol = document.getElementById('lendingToken').value;
@@ -592,7 +589,6 @@
             }
         }
 
-        /* --- CÁC HÀM BORROW --- */
         async function uiBorrow() {
             if (!userAddress || !window.ethereum) return alert("Vui lòng kết nối ví trước!");
             const tokenSymbol = document.getElementById('borrowToken').value;
@@ -618,7 +614,6 @@
             }
         }
 
-        /* --- CÁC HÀM CẦU NỐI (BRIDGE) --- */
         async function approveBridge() {
             if (!userAddress || !window.ethereum) return alert("Vui lòng kết nối ví trước!");
             const tokenSymbol = document.getElementById('bridgeToken').value;
