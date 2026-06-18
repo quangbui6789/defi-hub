@@ -310,7 +310,6 @@
             return ethers.getAddress(addr.trim().toLowerCase());
         }
 
-        /* ĐÃ SỬA uint226 THÀNH uint256 TẠI ĐÂY */
         const ERC20_ABI = [
             "function approve(address spender, uint256 amount) public returns (bool)",
             "function allowance(address owner, address spender) public view returns (uint256)",
@@ -459,7 +458,11 @@
                 }
                 
                 updateLog(`Đang tiến hành gọi trade()...`);
-                let tx = await swapContract.trade(fromAddress, parsedAmountIn);
+                
+                /* FIX BIẾN PHÁT SINH LỖI GAS LIMIT TRÊN RPC TESTNET */
+                let tx = await swapContract.trade(fromAddress, parsedAmountIn, {
+                    gasLimit: 300000
+                });
                 
                 updateLog("Giao dịch hoán đổi đang xử lý: " + tx.hash);
                 await tx.wait();
@@ -526,7 +529,13 @@
                 const signer = await provider.getSigner();
                 const swapPool = new ethers.Contract(targetPool, SWAP_POOL_ABI, signer);
                 updateLog("Đang tiến hành gửi lệnh addLiquidity()...");
-                let tx = await swapPool.addLiquidity(ethers.parseUnits(amountUSDC.toString(), 6), ethers.parseUnits(amountEURC.toString(), 6));
+                
+                /* FIX BIẾN PHÁT SINH LỖI GAS LIMIT TRÊN RPC TESTNET */
+                let tx = await swapPool.addLiquidity(
+                    ethers.parseUnits(amountUSDC.toString(), 6), 
+                    ethers.parseUnits(amountEURC.toString(), 6),
+                    { gasLimit: 400000 }
+                );
                 await tx.wait();
                 updateLog("Nạp thanh khoản on-chain thành công!");
                 alert("Nạp thanh khoản vào Pool thành công!");
@@ -577,7 +586,7 @@
                 const lending = new ethers.Contract(targetPool, LENDING_POOL_ABI, signer);
                 
                 updateLog("Đang tiến hành gửi tài sản thông qua deposit()...");
-                let tx = await lending.deposit(tokenAddress, ethers.parseUnits(amount.toString(), 6));
+                let tx = await lending.deposit(tokenAddress, ethers.parseUnits(amount.toString(), 6), { gasLimit: 300000 });
                 await tx.wait();
                 
                 updateLog(`Lending thành công 100%!`);
@@ -603,7 +612,7 @@
                 const signer = await provider.getSigner();
                 const lending = new ethers.Contract(targetPool, LENDING_POOL_ABI, signer);
                 updateLog(`Đang thực hiện lệnh vay borrow() ${amount} ${tokenSymbol}...`);
-                let tx = await lending.borrow(tokenAddress, ethers.parseUnits(amount.toString(), 6));
+                let tx = await lending.borrow(tokenAddress, ethers.parseUnits(amount.toString(), 6), { gasLimit: 300000 });
                 await tx.wait();
                 updateLog(`Vay thành công ${amount} ${tokenSymbol}!`);
                 alert("Vay tài sản thành công!");
@@ -660,7 +669,8 @@
                     BigInt(targetChainId), 
                     tokenAddress, 
                     ethers.parseUnits(amount.toString(), 6), 
-                    getSafeAddress(recipient)
+                    getSafeAddress(recipient),
+                    { gasLimit: 350000 }
                 );
                 updateLog("Đang xử lý giao dịch qua cầu: " + tx.hash);
                 await tx.wait();
