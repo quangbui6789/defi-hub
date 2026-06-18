@@ -424,13 +424,12 @@
             updateLog("Đã ngắt kết nối ví.");
         }
 
-        // Hàm helper lấy dữ liệu Gas Market an toàn kèm bộ đệm (Buffer 40%) để tránh trượt giá / quá hạn block
+        // Tăng mạnh biên độ gas (1.8x) để ép MetaMask không chạy hàm tự tính toán gas vòng lặp liên tục gây lỗi Review Alert
         async function getOptimizedGasFees(provider) {
             try {
                 const feeData = await provider.getFeeData();
-                // Tăng 40% phí tối đa và phí ưu tiên để MetaMask không nhảy lỗi Review Alert khi bấm chậm
-                const optimizedMaxFee = feeData.maxFeePerGas ? (feeData.maxFeePerGas * 140n) / 100n : undefined;
-                const optimizedPriorityFee = feeData.maxPriorityFeePerGas ? (feeData.maxPriorityFeePerGas * 140n) / 100n : undefined;
+                const optimizedMaxFee = feeData.maxFeePerGas ? (feeData.maxFeePerGas * 180n) / 100n : undefined;
+                const optimizedPriorityFee = feeData.maxPriorityFeePerGas ? (feeData.maxPriorityFeePerGas * 180n) / 100n : undefined;
                 return { maxFeePerGas: optimizedMaxFee, maxPriorityFeePerGas: optimizedPriorityFee };
             } catch (e) {
                 console.error("Không thể lấy dữ liệu gas tự động:", e);
@@ -467,7 +466,11 @@
 
                 if (BigInt(allowance) < BigInt(parsedAmountIn)) {
                     updateLog(`Hạn mức chưa đủ. Đang gửi yêu cầu Approve ${fromSymbol}...`);
-                    let approveTx = await tokenInContract.approve(targetRouter, parsedAmountIn, { ...gasFees });
+                    // Thêm gasLimit cố định cho lệnh Approve để MetaMask bỏ qua bước tự tính toán gas lỗi thời
+                    let approveTx = await tokenInContract.approve(targetRouter, parsedAmountIn, { 
+                        gasLimit: 100000,
+                        ...gasFees 
+                    });
                     updateLog(`Giao dịch Approve đã phát lên mạng: ${approveTx.hash}. Chờ xác nhận...`);
                     await approveTx.wait();
                     updateLog(`Approve thành công!`);
@@ -506,7 +509,7 @@
                 const gasFees = await getOptimizedGasFees(provider);
                 
                 updateLog("Đang Approve USDC...");
-                let tx = await usdc.approve(targetPool, ethers.parseUnits(amountUSDC.toString(), 6), { ...gasFees });
+                let tx = await usdc.approve(targetPool, ethers.parseUnits(amountUSDC.toString(), 6), { gasLimit: 100000, ...gasFees });
                 await tx.wait();
                 updateLog("Approve USDC thành công! Tiếp tục bấm Approve EURC.");
             } catch (err) { 
@@ -527,7 +530,7 @@
                 const gasFees = await getOptimizedGasFees(provider);
 
                 updateLog("Đang Approve EURC...");
-                let tx = await eurc.approve(targetPool, ethers.parseUnits(amountEURC.toString(), 6), { ...gasFees });
+                let tx = await eurc.approve(targetPool, ethers.parseUnits(amountEURC.toString(), 6), { gasLimit: 100000, ...gasFees });
                 await tx.wait();
                 updateLog("Approve EURC thành công! Bấm Xác Nhận Thêm Thanh Khoản.");
             } catch (err) { 
@@ -586,7 +589,7 @@
                 const gasFees = await getOptimizedGasFees(provider);
                 
                 updateLog(`Đang duyệt chi (Approve) ${tokenSymbol} cho Lending Pool...`);
-                let tx = await token.approve(targetPool, ethers.parseUnits(amount.toString(), 6), { ...gasFees });
+                let tx = await token.approve(targetPool, ethers.parseUnits(amount.toString(), 6), { gasLimit: 100000, ...gasFees });
                 await tx.wait();
                 updateLog(`Approve ${tokenSymbol} thành công! Hãy bấm Xác Nhận Gửi (Deposit).`);
             } catch (err) {
@@ -672,7 +675,7 @@
                 const gasFees = await getOptimizedGasFees(provider);
 
                 updateLog(`Đang Approve ${tokenSymbol} cho Cầu nối (Bridge)...`);
-                let tx = await token.approve(targetBridge, ethers.parseUnits(amount.toString(), 6), { ...gasFees });
+                let tx = await token.approve(targetBridge, ethers.parseUnits(amount.toString(), 6), { gasLimit: 100000, ...gasFees });
                 await tx.wait();
                 updateLog(`Approve thành công!`);
             } catch (err) {
