@@ -174,6 +174,7 @@
     </div>
 
     <div class="container">
+        <!-- TAB SWAP -->
         <div id="swap-tab" class="tab-content active">
             <div class="input-group">
                 <label>Từ Token</label>
@@ -199,6 +200,7 @@
             <button class="btn-action" onclick="uiSwap()">Xác Nhận Swap</button>
         </div>
 
+        <!-- TAB LIQUIDITY -->
         <div id="liquidity-tab" class="tab-content">
             <h3>Liquidity Pool</h3>
             <div class="input-group">
@@ -221,6 +223,7 @@
             <button class="btn-action" style="background-color: #10b981;" onclick="executeAddLiquidity()">Xác Nhận Thêm Thanh Khoản</button>
         </div>
 
+        <!-- TAB LENDING -->
         <div id="lending-tab" class="tab-content">
             <h3>Lending Pool</h3>
             <div class="input-group">
@@ -242,6 +245,7 @@
             <button class="btn-action" style="background-color: #10b981;" onclick="executeLendingDeposit()">Xác Nhận Gửi (Deposit)</button>
         </div>
 
+        <!-- TAB BORROW -->
         <div id="borrow-tab" class="tab-content">
             <h3>Borrow (Vay)</h3>
             <div class="input-group">
@@ -261,6 +265,7 @@
             <button class="btn-action" onclick="uiBorrow()">Xác Nhận Vay</button>
         </div>
 
+        <!-- TAB BRIDGE -->
         <div id="bridge-tab" class="tab-content">
             <h3>Cross-Chain Bridge</h3>
             <div class="input-group">
@@ -453,21 +458,23 @@
                 
                 const parsedAmountIn = ethers.parseUnits(amountIn, 6);
 
-                // KIỂM TRA VÀ TỰ ĐỘNG APPROVE LẠI NGẦM TẠI ĐÂY
                 updateLog(`Đang kiểm tra quyền hạn (allowance) của ${fromSymbol}...`);
                 const allowance = await tokenInContract.allowance(userAddress, targetRouter);
 
                 if (allowance < parsedAmountIn) {
                     updateLog(`Hạn mức cũ đã hết hoặc chưa đủ. Đang gửi yêu cầu Approve ${fromSymbol}...`);
-                    let approveTx = await tokenInContract.approve(targetRouter, parsedAmountIn);
+                    let approveTx = await tokenInContract.approve(targetRouter, parsedAmountIn, {
+                        gasLimit: 100000
+                    });
                     await approveTx.wait();
                     updateLog(`Approve thành công! Đang thực thi hoán đổi trade()...`);
                 } else {
-                    updateLog(`Hạn mức khả dụng đầy đủ. Bỏ qua bước approve, tiến hành trade()...`);
+                    updateLog(`Hạn mức khả dụng đầy đủ. Tiến hành trade()...`);
                 }
                 
+                // GIẢI PHÁP: Set cứng cấu hình Gas để vượt qua cơ chế Estimate của mạng Arc
                 let tx = await swapContract.trade(fromAddress, parsedAmountIn, {
-                    gasLimit: 350000 
+                    gasLimit: 600000 // Tăng hạn mức gas tối đa cho lệnh hoán đổi phức tạp
                 });
                 
                 updateLog("Giao dịch hoán đổi đang xử lý: " + tx.hash);
@@ -481,7 +488,7 @@
             } catch (err) {
                 console.error(err);
                 updateLog("Giao dịch lỗi: " + (err.reason || err.message));
-                alert("Lỗi: Giao dịch bị từ chối hoặc RPC quá tải (Rate limit). Vui lòng thử lại sau ít phút.");
+                alert("Lỗi giao dịch! Kiểm tra lại số dư hoặc cài đặt trượt giá trên contract.");
             }
         }
 
@@ -496,7 +503,7 @@
                 const signer = await provider.getSigner();
                 const usdc = new ethers.Contract(getSafeAddress(RAW_CONTRACTS.USDC_TOKEN), ERC20_ABI, signer);
                 updateLog("Đang Approve USDC...");
-                let tx = await usdc.approve(targetPool, ethers.parseUnits(amountUSDC, 6));
+                let tx = await usdc.approve(targetPool, ethers.parseUnits(amountUSDC, 6), { gasLimit: 100000 });
                 await tx.wait();
                 updateLog("Approve USDC thành công! Tiếp tục bấm Approve EURC.");
             } catch (err) { 
@@ -515,7 +522,7 @@
                 const signer = await provider.getSigner();
                 const eurc = new ethers.Contract(getSafeAddress(RAW_CONTRACTS.EURC_TOKEN), ERC20_ABI, signer);
                 updateLog("Đang Approve EURC...");
-                let tx = await eurc.approve(targetPool, ethers.parseUnits(amountEURC, 6));
+                let tx = await eurc.approve(targetPool, ethers.parseUnits(amountEURC, 6), { gasLimit: 100000 });
                 await tx.wait();
                 updateLog("Approve EURC thành công! Bấm Xác Nhận Thêm Thanh Khoản.");
             } catch (err) { 
@@ -537,7 +544,7 @@
                 const signer = await provider.getSigner();
                 const swapPool = new ethers.Contract(targetPool, SWAP_POOL_ABI, signer);
                 updateLog("Đang tiến hành gửi lệnh addLiquidity()...");
-                let tx = await swapPool.addLiquidity(ethers.parseUnits(amountUSDC, 6), ethers.parseUnits(amountEURC, 6), { gasLimit: 300000 });
+                let tx = await swapPool.addLiquidity(ethers.parseUnits(amountUSDC, 6), ethers.parseUnits(amountEURC, 6), { gasLimit: 600000 });
                 await tx.wait();
                 updateLog("Nạp thanh khoản on-chain thành công 100%!");
                 alert("Nạp thanh khoản vào Pool thành công!");
@@ -565,7 +572,7 @@
                 const token = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
                 
                 updateLog(`Đang duyệt chi (Approve) ${tokenSymbol} cho Lending Pool...`);
-                let tx = await token.approve(targetPool, ethers.parseUnits(amount, 6));
+                let tx = await token.approve(targetPool, ethers.parseUnits(amount, 6), { gasLimit: 100000 });
                 await tx.wait();
                 updateLog(`Approve ${tokenSymbol} thành công! Hãy đợi vài giây rồi bấm Xác Nhận Gửi (Deposit).`);
             } catch (err) {
@@ -589,7 +596,7 @@
                 const lending = new ethers.Contract(targetPool, LENDING_POOL_ABI, signer);
                 
                 updateLog("Đang tiến hành gửi tài sản thông qua deposit()...");
-                let tx = await lending.deposit(tokenAddress, ethers.parseUnits(amount, 6), { gasLimit: 300000 });
+                let tx = await lending.deposit(tokenAddress, ethers.parseUnits(amount, 6), { gasLimit: 500000 });
                 await tx.wait();
                 
                 updateLog(`Lending ${amount} ${tokenSymbol} thành công 100%!`);
@@ -617,7 +624,7 @@
                 const signer = await provider.getSigner();
                 const lending = new ethers.Contract(targetPool, LENDING_POOL_ABI, signer);
                 updateLog(`Đang thực hiện lệnh vay borrow() ${amount} ${tokenSymbol}...`);
-                let tx = await lending.borrow(tokenAddress, ethers.parseUnits(amount, 6), { gasLimit: 300000 });
+                let tx = await lending.borrow(tokenAddress, ethers.parseUnits(amount, 6), { gasLimit: 500000 });
                 await tx.wait();
                 updateLog(`Vay thành công ${amount} ${tokenSymbol}!`);
                 alert("Vay tài sản thành công!");
@@ -645,7 +652,7 @@
                 const token = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
 
                 updateLog(`Đang Approve ${tokenSymbol} cho Cầu nối (Bridge)...`);
-                let tx = await token.approve(targetBridge, ethers.parseUnits(amount, 6));
+                let tx = await token.approve(targetBridge, ethers.parseUnits(amount, 6), { gasLimit: 100000 });
                 await tx.wait();
                 updateLog(`Approve thành công!`);
             } catch (err) {
@@ -671,7 +678,7 @@
                 const bridge = new ethers.Contract(targetBridge, BRIDGE_ABI, signer);
 
                 updateLog(`Đang gửi lệnh bridgeAsset()...`);
-                let tx = await bridge.bridgeAsset(1, tokenAddress, ethers.parseUnits(amount, 6), recipient, { gasLimit: 300000 });
+                let tx = await bridge.bridgeAsset(1, tokenAddress, ethers.parseUnits(amount, 6), recipient, { gasLimit: 500000 });
                 await tx.wait();
                 updateLog(`Bridge thành công!`);
                 alert("Kích hoạt cầu nối thành công!");
