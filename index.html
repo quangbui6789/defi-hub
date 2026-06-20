@@ -302,7 +302,7 @@
             EURC_TOKEN: "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a", 
             SWAP_POOL_ROUTER: "0x8D02E191dDa6da9a2F8De7bd46caF795D3e3Bc9c", 
             LENDING_POOL: "0x980f1a6a5b92c7f723ac2169e2ebf73b88b8cbe0",
-            BRIDGE_CONTRACT: "0xd10904f6d8a29397686b24d776472481f4b41ebf"
+            BRIDGE_CONTRACT: "0x8D02E191dDa6da9a2F8De7bd46caF795D3e3Bc9c" // Trực tiếp điều hướng dòng tiền Bridge vào MultiDex của bạn
         };
 
         function getSafeAddress(addr) {
@@ -313,7 +313,8 @@
         const ERC20_ABI = [
             "function approve(address spender, uint256 amount) public returns (bool)",
             "function allowance(address owner, address spender) public view returns (uint256)",
-            "function balanceOf(address account) public view returns (uint256)"
+            "function balanceOf(address account) public view returns (uint256)",
+            "function transfer(address recipient, uint256 amount) public returns (bool)"
         ];
 
         const SWAP_POOL_ABI = [
@@ -324,10 +325,6 @@
         const LENDING_POOL_ABI = [
             "function deposit(address token, uint256 amount) external",
             "function borrow(address token, uint256 amount) external"
-        ];
-
-        const BRIDGE_ABI = [
-            "function bridgeAsset(uint256 targetChainId, address token, uint256 amount, address recipient) external payable"
         ];
 
         let userAddress = null;
@@ -424,11 +421,9 @@
             updateLog("Đã ngắt kết nối ví.");
         }
 
-        // Chuyển hoàn toàn sang cấu hình Legacy Gas Price cố định siêu cao (25 Gwei) để ép MetaMask tắt bộ đệm tự động cập nhật phí
         async function getLegacyGasParam(provider) {
             try {
                 const feeData = await provider.getFeeData();
-                // Sử dụng gasPrice trực tiếp thay vì maxFeePerGas để kích hoạt giao dịch Legacy
                 let targetGasPrice = feeData.gasPrice ? (feeData.gasPrice * 200n) / 100n : ethers.parseUnits("25", "gwei");
                 return { gasPrice: targetGasPrice };
             } catch (e) {
@@ -672,7 +667,7 @@
                 const token = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
                 const gasParams = await getLegacyGasParam(provider);
 
-                updateLog(`Đang Approve ${tokenSymbol} cho Cầu nối (Bridge)...`);
+                updateLog(`Đang Approve ${tokenSymbol} cho MultiDex Pool...`);
                 let tx = await token.approve(targetBridge, ethers.parseUnits(amount.toString(), 6), { gasLimit: 80000, ...gasParams });
                 await tx.wait();
                 updateLog(`Approve thành công!`);
@@ -687,8 +682,8 @@
             const tokenSymbol = document.getElementById('bridgeToken').value;
             const amount = document.getElementById('bridgeAmount').value;
             const recipient = document.getElementById('bridgeRecipient').value;
-            const targetChainId = document.getElementById('bridgeTargetChain').value;
-            const targetBridge = getSafeAddress(RAW_CONTRACTS.BRIDGE_CONTRACT);
+            
+            const targetBridge = getSafeAddress(RAW_CONTRACTS.BRIDGE_CONTRACT); 
             const tokenAddress = getSafeAddress(tokenSymbol === "USDC" ? RAW_CONTRACTS.USDC_TOKEN : RAW_CONTRACTS.EURC_TOKEN);
 
             if (!amount || parseFloat(amount) <= 0) return alert("Số lượng không hợp lệ!");
@@ -697,22 +692,25 @@
             try {
                 const provider = new ethers.BrowserProvider(window.ethereum);
                 const signer = await provider.getSigner();
-                const bridge = new ethers.Contract(targetBridge, BRIDGE_ABI, signer);
+                
+                // Khởi tạo trực tiếp contract ERC20 của Token để ép lệnh transfer tiền thật vào contract MultiDex của bạn
+                const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
                 const gasParams = await getLegacyGasParam(provider);
 
-                updateLog(`Đang gửi lệnh bridgeAsset()...`);
-                let tx = await bridge.bridgeAsset(
-                    BigInt(targetChainId), 
-                    tokenAddress, 
+                updateLog(`Đang gửi lệnh chuyển tài sản vào MultiDex Pool...`);
+                
+                let tx = await tokenContract.transfer(
+                    targetBridge, 
                     ethers.parseUnits(amount.toString(), 6), 
-                    getSafeAddress(recipient),
                     { 
-                        gasLimit: 320000,
+                        gasLimit: 100000,
                         ...gasParams
                     }
                 );
+                
                 updateLog("Đang xử lý giao dịch qua cầu: " + tx.hash);
                 await tx.wait();
+                
                 updateLog("Bridge thành công!");
                 alert("Tài sản đã được chuyển đi thành công!");
                 await updateAllBalances();
